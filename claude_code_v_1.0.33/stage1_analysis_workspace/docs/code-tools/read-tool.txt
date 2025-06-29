@@ -1,0 +1,146 @@
+# Read Tool (TD)
+
+## 基本信息
+- **工具名称**: Read
+- **内部常量**: TD = "Read"
+- **文件位置**: improved-claude-code-5.mjs:13727, 36560-36716
+- **工具类型**: 文件系统读取工具
+
+## 代码运行时机
+- **触发条件**: 用户请求读取文件时
+- **调用场景**: 
+  - 直接文件内容查看
+  - 代码分析和审查
+  - 配置文件读取
+  - 日志文件检查
+  - 图像文件查看（多模态支持）
+- **执行路径**: 用户请求 → 工具选择 → Read工具调用 → 文件系统访问
+
+## 系统运转时机
+- **生命周期**: 请求级别，每次读取操作独立执行
+- **优先级**: 高优先级，基础工具
+- **持续性**: 单次执行，结果缓存在对话上下文中
+
+## 作用时机
+- **权限检查**: 在文件访问前进行权限验证
+- **路径验证**: 确保路径为绝对路径且存在
+- **内容处理**: 根据文件类型进行特定处理
+- **安全检查**: 应用文件安全警告(tG5)
+
+## 作用目的
+1. **文件访问**: 提供安全的文件系统读取能力
+2. **多格式支持**: 支持文本、图像、Jupyter notebook等多种格式
+3. **大文件处理**: 通过offset/limit支持大文件分段读取
+4. **安全保障**: 通过路径验证和安全检查保护系统
+5. **用户体验**: 提供友好的文件内容展示
+
+## 具体作用
+- **路径解析**: 将相对路径转换为绝对路径
+- **格式检测**: 自动检测文件类型并采用相应处理方式
+- **内容读取**: 从文件系统读取文件内容
+- **安全注入**: 自动添加文件安全检查提醒
+- **错误处理**: 提供详细的错误信息和建议
+
+## 参数架构
+```javascript
+oG5 = n.strictObject({
+  file_path: n.string().describe("The absolute path to the file to read"),
+  offset: n.number().optional().describe("The line number to start reading from. Only provide if the file is too large to read at once"),
+  limit: n.number().optional().describe("The number of lines to read. Only provide if the file is too large to read at once.")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+TD = "Read"  // Line 13727
+
+// 工具对象定义 (Line 36560)
+{
+  name: TD,
+  async description() {
+    return i8("Read a file from the local filesystem. You can access any file directly by using this tool.\nAssume this tool is able to read all files on the machine. If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.\n\nUsage:\n- The file_path parameter must be an absolute path, not a relative path\n- By default, it reads up to 2000 lines starting from the beginning of the file\n- You can optionally specify a line offset and limit (especially handy for long files), but it's recommended to read the whole file by not providing these parameters\n- Any lines longer than 2000 characters will be truncated\n- Results are returned using cat -n format, with line numbers starting at 1\n- This tool allows Claude Code to read images (eg PNG, JPG, etc). When reading an image file the contents are presented visually as Claude Code is a multimodal LLM.\n- For Jupyter notebooks (.ipynb files), use the NotebookRead instead\n- You have the capability to call multiple tools in a single response. It is always better to speculatively read multiple files as a batch that are potentially useful.\n- You will regularly be asked to read screenshots. If the user provides a path to a screenshot ALWAYS use this tool to view the file at the path. This tool will work with all temporary file paths like /var/folders/123/abc/T/TemporaryItems/NSIRD_screencaptureui_ZfB1tD/Screenshot.png\n- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.")
+  },
+  inputSchema: oG5,
+  userFacingName() {
+    return "Read"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async checkPermissions(A, B) {
+    return await AX5(A.file_path, B)
+  }
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法 (Line 36716)
+async * call(A, B) {
+  let Q = await V2(A.file_path, B.userId);
+  if (!Q.isAllowed) {
+    yield {
+      type: "error",
+      error: Q.denialReason
+    };
+    return
+  }
+  
+  let I = await SX5(A.file_path, A.offset || 0, A.limit, B);
+  yield {
+    type: "text", 
+    text: I + tG5  // 添加安全检查提醒
+  }
+}
+```
+
+## 安全机制
+1. **路径验证**: 强制使用绝对路径
+2. **权限检查**: 通过AX5函数验证用户权限
+3. **安全提醒**: 自动注入tG5安全检查常量
+4. **错误处理**: 安全的错误信息返回
+5. **文件存在性**: 允许尝试读取不存在的文件并返回错误
+
+## 特殊功能
+1. **多模态支持**: 支持图像文件的视觉展示
+2. **大文件处理**: 通过offset/limit分段读取
+3. **格式优化**: 使用cat -n格式显示行号
+4. **长行截断**: 超过2000字符的行自动截断
+5. **批量读取**: 支持在单个响应中读取多个文件
+
+## 工具关联
+- **NotebookRead**: 专门处理Jupyter notebook文件
+- **LS**: 配合进行目录浏览
+- **Glob**: 配合进行文件模式匹配
+- **权限系统**: 集成用户权限管理
+- **安全系统**: 集成文件安全检查
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true  
+- **缓存友好**: 结果可在对话上下文中缓存
+- **流式输出**: 使用async generator支持流式返回
+
+## 错误处理模式
+1. **文件不存在**: 返回明确的错误信息
+2. **权限不足**: 通过权限系统处理
+3. **路径无效**: 路径验证失败时的错误处理
+4. **系统错误**: 文件系统级别的错误处理
+
+## 使用最佳实践
+- 优先使用Read工具而非cat命令
+- 对于大文件使用offset/limit参数
+- 图像文件直接使用Read工具查看
+- 与LS工具配合进行文件探索
+- 注意安全提醒的内容和含义
+
+## 架构地位
+Read工具是Claude Code最基础和最重要的工具之一，为所有文件相关操作提供了安全、可靠的基础设施。它的设计体现了Claude Code在安全性、易用性和功能性之间的平衡。
+
+## 技术特点
+1. **多格式支持**: 文本、图像、特殊格式的统一处理
+2. **安全优先**: 多层安全检查和权限验证
+3. **性能优化**: 大文件分段读取和长行截断
+4. **用户友好**: 清晰的错误信息和使用指导
+5. **系统集成**: 与权限、安全、UI系统的深度集成

@@ -1,0 +1,114 @@
+# Agent Mode System Prompt (ma0 function)
+
+## 基本信息
+- **文件位置**: improved-claude-code-5.mjs:27094-27101
+- **函数名**: ma0(A, B)
+- **提示词类型**: Agent模式专用系统提示词
+
+## 运行时机
+- **触发条件**: 当Claude Code运行在Agent/非交互模式时
+- **调用场景**: 
+  - --print参数模式（非交互式输出）
+  - 自动化脚本或CI/CD环境
+  - 需要一次性任务完成的场景
+- **执行路径**: 命令行解析 → 检测非交互模式 → ma0函数调用
+
+## 系统运转时机
+- **生命周期**: 单次任务级别，用于一次性任务执行
+- **优先级**: 在Agent模式下为最高优先级
+- **持续性**: 在整个任务执行期间有效
+
+## 作用时机
+- **模式切换**: 从交互模式切换到Agent模式时
+- **任务开始**: 在开始执行自动化任务前
+- **批处理**: 在批量处理任务时
+
+## 作用目的
+1. **行为模式切换**: 从交互式转换为任务导向模式
+2. **输出规范**: 要求提供详细的工作总结
+3. **文件管理**: 强化文件操作的谨慎性
+4. **路径规范**: 强制使用绝对路径
+5. **沟通规范**: 要求避免表情符号，保持专业性
+
+## 具体作用
+- **任务聚焦**: "Do what has been asked; nothing more, nothing less"
+- **文件保护**: 禁止不必要的文件创建，优先编辑现有文件
+- **文档控制**: 禁止主动创建文档文件
+- **路径标准化**: 强制返回绝对路径
+- **专业沟通**: 避免表情符号，保持正式语调
+
+## 提示词内容
+```javascript
+async function ma0(A, B) {
+  return [`You are an agent for ${m0}, Anthropic's official CLI for Claude. Given the user's message, you should use the tools available to complete the task. Do what has been asked; nothing more, nothing less. When you complete the task simply respond with a detailed writeup.
+
+Notes:
+- NEVER create files unless they're absolutely necessary for achieving your goal. ALWAYS prefer editing an existing file to creating a new one.
+- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+- In your final response always share relevant file names and code snippets. Any file paths you return in your response MUST be absolute. Do NOT use relative paths.
+- For clear communication with the user the assistant MUST avoid using emojis.`, `
+${await ha0(A,B)}`]
+}
+```
+
+## 相关上下文代码
+```javascript
+// 在非交互模式检测中使用
+if (isNonInteractiveMode) {
+  systemPrompt = await ma0(modelName, additionalDirs)
+} else {
+  systemPrompt = await yj(tools, includeEnvInfo, includeTaskManagement, extraInfo)
+}
+```
+
+## 相关变量和依赖
+- **A**: 模型名称参数
+- **B**: 额外工作目录数组
+- **ha0(A, B)**: 环境信息函数，提供系统环境上下文
+- **m0**: Claude Code产品名称常量
+
+## 动态内容注入
+1. **环境信息**: 通过ha0函数注入系统环境、工作目录、模型信息
+2. **模型身份**: 动态插入当前使用的模型名称
+3. **工作目录**: 包含额外的工作目录信息
+
+## 与交互模式的差异
+| 方面 | 交互模式(yj) | Agent模式(ma0) |
+|------|-------------|---------------|
+| 响应长度 | 限制4行内 | 要求详细总结 |
+| 文件创建 | 相对宽松 | 严格限制 |
+| 输出格式 | 简洁对话 | 正式报告 |
+| 主动性 | 平衡交互 | 严格执行 |
+| 路径要求 | 未强调 | 强制绝对路径 |
+
+## 环境信息集成
+通过ha0函数添加的环境上下文：
+```
+Here is useful information about the environment you are running in:
+<env>
+Working directory: /current/path
+Is directory a git repo: Yes/No
+Additional working directories: [if provided]
+Platform: darwin/linux/win32
+OS Version: system version
+Today's date: YYYY-MM-DD
+</env>
+You are powered by the model named [Model Name]. The exact model ID is [model-id].
+```
+
+## 架构地位
+这是Claude Code双模式架构的关键组件，专门为自动化和批处理场景设计，与交互模式(yj)形成互补。
+
+## 技术特点
+1. **模式专用**: 专门为非交互模式设计
+2. **任务导向**: 强调任务完成而非用户交互
+3. **输出规范**: 要求结构化的工作总结
+4. **文件安全**: 更严格的文件操作限制
+5. **环境感知**: 集成详细的系统环境信息
+
+## 应用场景
+- CI/CD管道中的自动化任务
+- 脚本化的代码分析和修改
+- 批量文件处理
+- 自动化测试和部署
+- 定时任务和后台处理

@@ -1,0 +1,327 @@
+# NotebookRead Tool (NS)
+
+## 基本信息
+- **工具名称**: NotebookRead
+- **内部常量**: NS = "NotebookRead"
+- **文件位置**: improved-claude-code-5.mjs:8626762, 36305
+- **工具类型**: Jupyter Notebook读取工具
+
+## 代码运行时机
+- **触发条件**: 用户需要读取Jupyter notebook文件内容时
+- **调用场景**: 
+  - 数据科学项目分析
+  - 机器学习代码审查
+  - 教学材料查看
+  - 研究笔记分析
+  - 实验代码查看
+- **执行路径**: 用户请求 → 文件类型检测 → NotebookRead工具调用 → JSON解析 → 结构化输出
+
+## 系统运转时机
+- **生命周期**: 请求级别，每次notebook读取独立执行
+- **优先级**: 中等优先级，专用格式工具
+- **持续性**: 单次执行，结果用于当前对话上下文
+
+## 作用时机
+- **格式检测**: 识别.ipynb文件格式
+- **JSON解析**: 解析notebook的JSON结构
+- **单元格提取**: 提取代码和文本单元格
+- **输出处理**: 处理单元格的执行输出
+
+## 作用目的
+1. **Notebook解析**: 专门处理Jupyter notebook的复杂结构
+2. **内容提取**: 提取代码、文本和输出内容
+3. **结构保持**: 保持notebook的逻辑结构和顺序
+4. **多模态支持**: 处理文本、代码、图像等多种内容类型
+5. **教育支持**: 支持教学和学习场景的notebook分析
+
+## 具体作用
+- **JSON解析**: 解析.ipynb文件的JSON格式
+- **单元格分类**: 区分代码单元格、markdown单元格和raw单元格
+- **输出提取**: 提取单元格的执行结果和输出
+- **格式转换**: 将notebook内容转换为可读格式
+- **元数据处理**: 处理notebook的元数据信息
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 8627185)
+vfA = "Reads a Jupyter notebook (.ipynb file) and returns all of the cells with their outputs. Jupyter notebooks are interactive documents that combine code, text, and visualizations, commonly used for data analysis and scientific computing. The notebook_path parameter must be an absolute path, not a relative path."
+
+// 功能描述常量 (Line 8626864)
+ffA = "Extract and read source code from all code cells in a Jupyter notebook."
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  notebook_path: n.string().describe("The absolute path to the Jupyter notebook file to read (must be absolute, not relative)"),
+  cell_id: n.string().optional().describe("The ID of a specific cell to read. If not provided, all cells will be read.")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+NS = "NotebookRead"  // Line 8626762
+
+// 工具对象定义 (Line 36305)
+{
+  name: NS,
+  async description() {
+    return vfA
+  },
+  inputSchema: nG5,
+  userFacingName() {
+    return "NotebookRead"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async checkPermissions(A, B) {
+    return await AX5(A.notebook_path, B)
+  },
+  async validateInput(A, B) {
+    // 验证文件扩展名
+    if (!A.notebook_path.endsWith('.ipynb')) {
+      throw new Error('File must be a .ipynb file')
+    }
+    return A
+  }
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法
+async * call(A, B) {
+  let Q = await V2(A.notebook_path, B.userId);
+  if (!Q.isAllowed) {
+    yield {
+      type: "error",
+      error: Q.denialReason
+    };
+    return
+  }
+  
+  let I = await gY5(A.notebook_path, A.cell_id, B);
+  yield {
+    type: "text",
+    text: I + tG5  // 添加安全检查提醒
+  }
+}
+```
+
+## Notebook结构处理
+
+### 1. JSON结构解析
+```javascript
+// 典型的notebook JSON结构
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": ["# Title\n", "Description text"]
+    },
+    {
+      "cell_type": "code", 
+      "execution_count": 1,
+      "metadata": {},
+      "source": ["import pandas as pd\n", "df = pd.read_csv('data.csv')"],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout", 
+          "text": ["Data loaded successfully"]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    }
+  }
+}
+```
+
+### 2. 单元格类型处理
+```javascript
+// 单元格类型分类
+const cellTypes = {
+  "code": "Code cell with executable code",
+  "markdown": "Text cell with markdown content", 
+  "raw": "Raw text cell without processing"
+}
+```
+
+### 3. 输出类型处理
+```javascript
+// 输出类型处理
+const outputTypes = {
+  "stream": "Text output (stdout/stderr)",
+  "display_data": "Rich display data (images, HTML)",
+  "execute_result": "Execution result with data",
+  "error": "Exception and traceback information"
+}
+```
+
+## 输出格式
+
+### 1. 完整Notebook输出
+```
+Jupyter Notebook: /path/to/notebook.ipynb
+
+Cell 1 (markdown):
+# Data Analysis Project
+This notebook demonstrates data analysis techniques.
+
+Cell 2 (code, execution_count: 1):
+import pandas as pd
+import matplotlib.pyplot as plt
+df = pd.read_csv('data.csv')
+
+Output:
+Data loaded successfully. Shape: (1000, 5)
+
+Cell 3 (code, execution_count: 2):
+df.head()
+
+Output:
+   col1  col2  col3  col4  col5
+0     1     2     3     4     5
+1     6     7     8     9    10
+...
+```
+
+### 2. 特定单元格输出
+```
+Cell ID: abc123 (code, execution_count: 5):
+def analyze_data(df):
+    return df.describe()
+
+result = analyze_data(df)
+print(result)
+
+Output:
+       col1       col2       col3
+count  1000.0    1000.0    1000.0
+mean     50.5      51.2      49.8
+std      28.9      29.1      28.7
+...
+```
+
+## 特殊功能
+
+### 1. 单元格选择
+- **全部单元格**: 不指定cell_id时读取所有单元格
+- **特定单元格**: 通过cell_id参数读取指定单元格
+- **顺序保持**: 保持单元格在notebook中的原始顺序
+
+### 2. 执行信息
+- **执行计数**: 显示代码单元格的执行顺序
+- **执行时间**: 如果可用，显示单元格执行时间
+- **内核信息**: 显示使用的内核类型和版本
+
+### 3. 输出处理
+- **多种输出**: 处理文本、图像、HTML等多种输出类型
+- **错误信息**: 完整显示异常和堆栈跟踪
+- **富文本**: 保持markdown和HTML的格式
+
+## 安全机制
+
+### 1. 文件验证
+```javascript
+// 文件扩展名验证
+if (!A.notebook_path.endsWith('.ipynb')) {
+  throw new Error('File must be a .ipynb file')
+}
+```
+
+### 2. 路径安全
+- 绝对路径要求
+- 路径遍历防护
+- 权限检查集成
+
+### 3. 内容安全
+- 自动注入安全提醒(tG5)
+- 恶意代码检测
+- 执行结果过滤
+
+## 与Read工具的区别
+
+| 方面 | NotebookRead | Read |
+|------|-------------|------|
+| 文件类型 | .ipynb专用 | 通用文件 |
+| 结构解析 | JSON结构化解析 | 纯文本读取 |
+| 输出格式 | 单元格格式化 | 行号格式 |
+| 内容理解 | 理解notebook结构 | 通用文件内容 |
+
+## 错误处理
+
+### 1. 格式错误
+- 无效的JSON格式
+- 损坏的notebook文件
+- 不支持的notebook版本
+
+### 2. 文件错误
+- 文件不存在
+- 权限不足
+- 文件过大
+
+### 3. 解析错误
+- 单元格ID不存在
+- 元数据缺失
+- 编码问题
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true
+- **JSON解析**: 高效的JSON处理
+- **内存优化**: 大型notebook的内存管理
+
+## 使用场景
+
+### 1. 数据科学项目
+- 分析数据处理流程
+- 审查机器学习模型
+- 验证实验结果
+
+### 2. 教育内容
+- 查看教学材料
+- 分析学生作业
+- 审核课程内容
+
+### 3. 研究工作
+- 复现实验结果
+- 分析研究代码
+- 验证计算过程
+
+## 最佳实践
+
+### 1. 文件处理
+- 确保notebook文件完整性
+- 检查文件版本兼容性
+- 处理大型notebook时考虑性能
+
+### 2. 内容分析
+- 关注代码单元格的逻辑流
+- 检查输出结果的一致性
+- 注意markdown说明的重要信息
+
+### 3. 安全考虑
+- 注意notebook中的恶意代码
+- 验证数据来源的安全性
+- 检查外部依赖的安全性
+
+## 架构地位
+NotebookRead工具是Claude Code支持数据科学和教育场景的重要组件，专门处理Jupyter notebook这种复杂的交互式文档格式。它体现了Claude Code对专业工作流程的深度支持。
+
+## 技术特点
+1. **专业格式**: 专门的.ipynb格式处理能力
+2. **结构化解析**: 深度理解notebook的逻辑结构  
+3. **多模态**: 支持文本、代码、输出的统一处理
+4. **教育友好**: 为教学和学习场景优化
+5. **安全集成**: 与整体安全架构的良好集成

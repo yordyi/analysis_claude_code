@@ -1,0 +1,163 @@
+# Context Compression System (AU2 function)
+
+## 基本信息
+- **文件位置**: improved-claude-code-5.mjs:44771-44967
+- **函数名**: AU2(A)
+- **提示词类型**: 上下文压缩指导提示词
+
+## 运行时机
+- **触发条件**: 当对话上下文超过92%使用率时自动触发
+- **调用场景**: 
+  - 长时间对话导致token使用率过高
+  - 手动执行/compact命令
+  - 系统检测到内存压力时
+- **执行路径**: token使用检查 → 超过阈值 → 压缩流程 → AU2调用
+
+## 系统运转时机
+- **生命周期**: 压缩任务级别，在需要时创建和执行
+- **优先级**: 高优先级，关系到系统持续运行能力
+- **持续性**: 压缩完成后影响后续所有交互
+
+## 作用时机
+- **阈值触发**: token使用率达到h11=0.92(92%)时
+- **压缩执行**: 在qH1压缩函数中调用
+- **提示生成**: 为压缩专用LLM模型生成指导提示
+
+## 作用目的
+1. **上下文保持**: 在压缩过程中保留关键信息
+2. **连续性保障**: 确保对话的逻辑连贯性
+3. **信息完整性**: 防止重要技术细节丢失
+4. **工作连续**: 保持当前工作状态和进度
+5. **用户意图**: 确保用户请求和反馈不被遗忘
+
+## 具体作用
+- **结构化压缩**: 通过8个明确部分系统化地总结对话
+- **优先级排序**: 确保最重要的信息优先保留
+- **技术细节**: 特别关注代码片段、文件路径、错误信息
+- **用户反馈**: 重点保留用户的明确指示和反馈
+- **工作状态**: 详细记录当前正在进行的工作
+
+## 8段式压缩结构
+
+### 1. Primary Request and Intent (主要请求和意图)
+- **目的**: 捕获用户的所有明确请求和意图
+- **内容**: 详细描述用户想要达成的目标
+- **重要性**: 确保核心任务不在压缩中丢失
+
+### 2. Key Technical Concepts (关键技术概念)
+- **目的**: 列出所有重要的技术概念、技术栈和框架
+- **内容**: 编程语言、框架、工具、方法论等
+- **重要性**: 保持技术上下文的连续性
+
+### 3. Files and Code Sections (文件和代码段)
+- **目的**: 枚举检查、修改或创建的具体文件和代码
+- **内容**: 完整的代码片段、文件路径、修改记录
+- **重要性**: 确保代码工作的可追溯性
+
+### 4. Errors and fixes (错误和修复)
+- **目的**: 记录所有遇到的错误及修复方法
+- **内容**: 错误信息、解决方案、用户反馈
+- **重要性**: 避免重复错误，学习经验
+
+### 5. Problem Solving (问题解决)
+- **目的**: 记录解决的问题和故障排除工作
+- **内容**: 问题分析过程、解决思路、结果
+- **重要性**: 保持解决问题的连续性
+
+### 6. All user messages (所有用户消息)
+- **目的**: 列出所有非工具结果的用户消息
+- **内容**: 用户的指示、反馈、需求变更
+- **重要性**: 用户意图和反馈是最关键的信息
+
+### 7. Pending Tasks (待处理任务)
+- **目的**: 概述明确要求的待完成任务
+- **内容**: 具体的任务列表、优先级、依赖关系
+- **重要性**: 确保工作计划的连续性
+
+### 8. Current Work (当前工作)
+- **目的**: 描述压缩前正在进行的具体工作
+- **内容**: 详细的工作状态、代码文件、进度
+- **重要性**: 确保工作无缝继续
+
+## 提示词内容（核心部分）
+```
+Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
+This summary should be thorough in capturing technical details, code patterns, and architectural decisions that would be essential for continuing development work without losing context.
+
+Before providing your final summary, wrap your analysis in <analysis> tags to organize your thoughts and ensure you've covered all necessary points.
+
+Your summary should include the following sections:
+
+1. Primary Request and Intent: Capture all of the user's explicit requests and intents in detail
+2. Key Technical Concepts: List all important technical concepts, technologies, and frameworks discussed.
+3. Files and Code Sections: Enumerate specific files and code sections examined, modified, or created. Pay special attention to the most recent messages and include full code snippets where applicable.
+4. Errors and fixes: List all errors that you ran into, and how you fixed them. Pay special attention to specific user feedback.
+5. Problem Solving: Document problems solved and any ongoing troubleshooting efforts.
+6. All user messages: List ALL user messages that are not tool results. These are critical for understanding the users' feedback and changing intent.
+7. Pending Tasks: Outline any pending tasks that you have explicitly been asked to work on.
+8. Current Work: Describe in detail precisely what was being worked on immediately before this summary request.
+```
+
+## 相关上下文代码
+```javascript
+// 压缩触发检查
+async function wU2(A, B) {
+  if (!await yW5(A)) return { messages: A, wasCompacted: false };
+  
+  try {
+    let { messagesAfterCompacting: I } = await qH1(A, B, true, undefined);
+    return { messages: I, wasCompacted: true };
+  } catch (I) {
+    return { messages: A, wasCompacted: false };
+  }
+}
+
+// 压缩执行
+async function qH1(A, B, Q, I) {
+  let Y = AU2(I);  // 生成压缩提示
+  let W = K2({ content: Y });
+  
+  // 使用压缩专用模型
+  let J = wu(JW([...A, W]), ["You are a helpful AI assistant tasked with summarizing conversations."], 0, [OB], B.abortController.signal, {
+    model: J7(),  // 压缩专用模型
+    // ...
+  });
+}
+```
+
+## 相关变量和依赖
+- **h11**: 压缩阈值常量 (0.92 = 92%)
+- **yW5**: 压缩需要性检查函数
+- **qH1**: 压缩执行函数
+- **J7()**: 压缩专用模型选择函数
+- **wU2**: 压缩协调函数
+
+## 压缩流程
+1. **需要性检查**: yW5()检查token使用率
+2. **提示生成**: AU2()创建压缩指导提示
+3. **模型调用**: 使用专门的压缩模型
+4. **结果处理**: 替换原始消息历史
+5. **状态更新**: 更新压缩状态标志
+
+## 压缩质量保证
+1. **强制分析**: 要求在<analysis>标签中组织思考
+2. **完整性检查**: 8个部分的强制覆盖
+3. **细节要求**: 强调代码片段和技术细节
+4. **用户优先**: 特别强调用户消息的重要性
+5. **工作连续**: 确保当前工作状态的详细记录
+
+## 架构地位
+这是Claude Code记忆管理系统的核心，确保长时间对话中信息的连续性和完整性，是实现"无限"对话长度的关键技术。
+
+## 技术特点
+1. **结构化压缩**: 8段式结构确保信息分类完整
+2. **开发导向**: 专门为软件开发工作流设计
+3. **细节保护**: 特别关注技术细节和代码内容
+4. **用户中心**: 将用户意图作为最高优先级
+5. **状态保持**: 确保工作状态的无缝传递
+
+## 与整体系统的协作
+- **Token管理**: 与zY5()等token计算函数协作
+- **模型选择**: 使用专门的压缩模型
+- **状态同步**: 与对话状态管理系统协作
+- **UI更新**: 压缩过程中的用户界面反馈

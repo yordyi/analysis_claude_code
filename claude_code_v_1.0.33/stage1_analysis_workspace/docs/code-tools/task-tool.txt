@@ -1,0 +1,262 @@
+# Task Tool (cX)
+
+## 基本信息
+- **工具名称**: Task
+- **内部常量**: cX = "Task"
+- **文件位置**: improved-claude-code-5.mjs:25993
+- **工具类型**: 智能代理搜索工具
+
+## 代码运行时机
+- **触发条件**: 用户需要进行复杂的、多轮的搜索和分析任务时
+- **调用场景**: 
+  - 开放式的代码搜索和分析
+  - 需要多轮Glob和Grep组合的复杂查询
+  - 不确定搜索目标的探索性任务
+  - 需要上下文理解的智能搜索
+  - 减少上下文使用的高效搜索
+- **执行路径**: 用户请求 → 任务分解 → Task工具调用 → 智能代理执行 → 结果整合
+
+## 系统运转时机
+- **生命周期**: 任务级别，可能包含多个子操作
+- **优先级**: 高优先级，智能搜索工具
+- **持续性**: 任务完成后返回整合结果
+
+## 作用时机
+- **任务分析**: 分析用户需求并制定搜索策略
+- **工具协调**: 智能选择和组合使用其他工具
+- **上下文管理**: 管理搜索过程中的上下文信息
+- **结果整合**: 将多轮搜索结果整合为有用信息
+
+## 作用目的
+1. **智能搜索**: 提供比单一工具更智能的搜索能力
+2. **上下文优化**: 减少对话上下文的使用
+3. **效率提升**: 通过智能代理减少用户的交互次数
+4. **复杂任务**: 处理需要多步骤的复杂搜索任务
+5. **探索发现**: 支持开放式的代码探索和分析
+
+## 具体作用
+- **任务规划**: 将复杂搜索任务分解为可执行步骤
+- **工具编排**: 智能选择和组合Glob、Grep、Read等工具
+- **信息整合**: 将分散的搜索结果整合为结构化信息
+- **上下文压缩**: 提取关键信息减少上下文占用
+- **智能推理**: 基于搜索结果进行推理和分析
+
+## 工具描述
+根据代码中的注释，Task工具的主要特点：
+```javascript
+// 使用建议在其他工具描述中提到
+"When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead"
+
+// 上下文优化目的
+"When doing file search, prefer to use the Task tool in order to reduce context usage."
+```
+
+## 参数架构
+```javascript
+// 基于发现的模式，可能的参数结构
+inputSchema: n.strictObject({
+  description: n.string().describe("A short (3-5 word) description of the task"),
+  prompt: n.string().describe("The task for the agent to perform")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+cX = "Task"  // Line 25993
+
+// 工具对象结构（推断）
+{
+  name: cX,
+  async description() {
+    return "Launch a new agent that has access to the following tools: Bash, Glob, Grep, LS, exit_plan_mode, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, WebFetch, TodoRead, TodoWrite, WebSearch, ..."
+  },
+  inputSchema: taskSchema,
+  userFacingName() {
+    return "Task"
+  },
+  isEnabled() {
+    return !0
+  },
+  async checkPermissions(A) {
+    return {
+      behavior: "allow",
+      updatedInput: A
+    }
+  }
+}
+```
+
+## 智能代理架构
+
+### 1. 可用工具集
+Task工具内部的代理可以访问以下工具：
+- **文件操作**: Bash, Read, Edit, MultiEdit, Write
+- **搜索工具**: Glob, Grep, LS  
+- **Notebook**: NotebookRead, NotebookEdit
+- **网络工具**: WebFetch, WebSearch
+- **任务管理**: TodoRead, TodoWrite
+- **计划模式**: exit_plan_mode
+
+### 2. 智能决策
+- **工具选择**: 根据任务需求智能选择最合适的工具
+- **执行顺序**: 优化工具调用顺序提高效率
+- **错误恢复**: 在工具调用失败时自动调整策略
+- **结果验证**: 验证搜索结果的完整性和准确性
+
+### 3. 上下文管理
+- **信息提取**: 从搜索结果中提取关键信息
+- **上下文压缩**: 压缩详细信息为精要总结
+- **状态维护**: 维护搜索过程中的状态信息
+- **结果缓存**: 缓存中间结果避免重复搜索
+
+## 使用场景
+
+### 1. 复杂代码搜索
+```javascript
+// 示例任务描述
+description: "Find authentication logic"
+prompt: "Search through the codebase to find all authentication-related code, including login functions, auth middleware, token validation, and session management. Provide a comprehensive overview of the authentication architecture."
+```
+
+### 2. 架构分析
+```javascript
+// 示例任务描述  
+description: "Analyze API structure"
+prompt: "Analyze the API structure of this project. Find all API endpoints, their methods, parameters, and responses. Map out the API architecture and identify patterns."
+```
+
+### 3. 问题诊断
+```javascript
+// 示例任务描述
+description: "Debug error patterns"
+prompt: "Find all error handling patterns in the codebase. Look for try-catch blocks, error classes, logging patterns, and error propagation mechanisms. Identify potential issues and improvement opportunities."
+```
+
+## 工作流程
+
+### 1. 任务分解
+```javascript
+// 任务分解示例
+1. 分析用户提供的任务描述
+2. 识别需要搜索的关键词和模式
+3. 确定搜索范围和文件类型
+4. 制定多步骤的搜索策略
+```
+
+### 2. 执行阶段
+```javascript
+// 执行阶段流程
+1. 使用Glob查找相关文件
+2. 使用Grep搜索关键内容
+3. 使用Read深入分析重要文件
+4. 根据需要调整搜索策略
+5. 整合和验证搜索结果
+```
+
+### 3. 结果整合
+```javascript
+// 结果整合过程
+1. 收集所有搜索结果
+2. 分析文件间的关联关系
+3. 提取关键信息和模式
+4. 生成结构化的分析报告
+5. 提供可操作的建议
+```
+
+## 与其他工具的关系
+
+### 1. 替代复杂搜索
+```
+当需要多轮Glob和Grep组合时，建议使用Task工具：
+"When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead"
+```
+
+### 2. 上下文优化
+```
+优先使用Task工具减少上下文使用：
+"When doing file search, prefer to use the Task tool in order to reduce context usage."
+```
+
+### 3. 工具编排
+- **协调器角色**: Task工具作为其他工具的协调器
+- **智能路由**: 根据任务需求路由到合适的工具
+- **结果聚合**: 聚合多个工具的输出结果
+
+## 性能优化
+
+### 1. 上下文效率
+- 减少主对话的上下文使用
+- 智能提取关键信息
+- 压缩冗余信息
+
+### 2. 搜索效率  
+- 并行执行多个搜索任务
+- 智能缓存搜索结果
+- 避免重复搜索
+
+### 3. 结果质量
+- 多维度验证搜索结果
+- 智能过滤无关信息
+- 提供结构化输出
+
+## 错误处理
+
+### 1. 搜索失败
+- 自动调整搜索策略
+- 尝试替代搜索路径
+- 提供部分结果
+
+### 2. 工具调用失败
+- 智能选择替代工具
+- 降级处理策略
+- 错误信息整合
+
+### 3. 结果验证失败
+- 重新验证搜索结果
+- 扩大搜索范围
+- 提供不完整结果警告
+
+## 权限和安全
+
+### 1. 权限继承
+- 继承用户的文件访问权限
+- 遵循相同的安全策略
+- 透明的权限检查
+
+### 2. 安全约束
+- 应用相同的安全限制
+- 防止恶意搜索模式
+- 保护敏感文件
+
+### 3. 审计日志
+- 记录所有工具调用
+- 跟踪搜索路径
+- 提供执行报告
+
+## 最佳实践
+
+### 1. 任务描述
+- 提供清晰的任务描述
+- 指定搜索目标和范围
+- 说明期望的输出格式
+
+### 2. 效率考虑
+- 对于简单搜索使用专用工具
+- 对于复杂任务使用Task工具
+- 避免过度使用造成资源浪费
+
+### 3. 结果验证
+- 检查返回结果的完整性
+- 验证搜索覆盖范围
+- 确认关键信息的准确性
+
+## 架构地位
+Task工具是Claude Code智能搜索能力的核心体现，它将多个基础工具编排成一个智能的搜索代理，能够处理复杂的、多步骤的搜索和分析任务。它的设计体现了AI工具从单一功能向智能编排的进化。
+
+## 技术特点
+1. **智能编排**: 多工具的智能组合和协调
+2. **上下文优化**: 显著减少主对话的上下文使用
+3. **自适应**: 根据任务需求自动调整搜索策略
+4. **高效集成**: 与所有其他工具的无缝集成
+5. **结果导向**: 专注于提供高质量的整合结果

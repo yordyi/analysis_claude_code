@@ -1,0 +1,365 @@
+# WebFetch Tool (IJ1)
+
+## 基本信息
+- **工具名称**: WebFetch
+- **内部常量**: IJ1 = "WebFetch"
+- **文件位置**: improved-claude-code-5.mjs:25995, 49897
+- **工具类型**: 网页内容获取和处理工具
+
+## 代码运行时机
+- **触发条件**: 用户需要获取和分析网页内容时
+- **调用场景**: 
+  - 获取在线文档和API文档
+  - 分析网页结构和内容
+  - 获取实时数据和信息
+  - 研究竞品网站功能
+  - 获取技术文章和教程
+- **执行路径**: 用户请求 → URL验证 → WebFetch工具调用 → 网页获取 → AI处理 → 结构化返回
+
+## 系统运转时机
+- **生命周期**: 请求级别，每次网页获取独立执行
+- **优先级**: 中等优先级，网络依赖工具
+- **持续性**: 单次执行，结果缓存15分钟
+
+## 作用时机
+- **URL验证**: 验证URL格式和可访问性
+- **内容获取**: 从指定URL获取网页内容
+- **格式转换**: 将HTML转换为Markdown格式
+- **AI处理**: 使用AI模型处理和分析内容
+
+## 作用目的
+1. **内容获取**: 从互联网获取最新的网页内容
+2. **信息提取**: 使用AI从网页中提取关键信息
+3. **格式优化**: 将网页内容转换为易读的格式
+4. **实时性**: 获取实时更新的网络信息
+5. **智能分析**: 基于用户提示智能分析网页内容
+
+## 具体作用
+- **网页抓取**: 获取完整的网页HTML内容
+- **格式转换**: HTML到Markdown的智能转换
+- **内容分析**: 使用AI模型分析和处理内容
+- **信息过滤**: 根据用户需求过滤相关信息
+- **结果缓存**: 15分钟的自清理缓存机制
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 25995)
+Na0 = `
+- Fetches content from a specified URL and processes it using an AI model
+- Takes a URL and a prompt as input
+- Fetches the URL content, converts HTML to markdown
+- Processes the content with the prompt using a small, fast model
+- Returns the model's response about the content
+- Use this tool when you need to retrieve and analyze web content
+
+Usage notes:
+  - IMPORTANT: If an MCP-provided web fetch tool is available, prefer using that tool instead of this one, as it may have fewer restrictions. All MCP-provided tools start with "mcp__".
+  - The URL must be a fully-formed valid URL
+  - HTTP URLs will be automatically upgraded to HTTPS
+  - The prompt should describe what information you want to extract from the page
+  - This tool is read-only and does not modify any files
+  - Results may be summarized if the content is very large
+  - Includes a self-cleaning 15-minute cache for faster responses when repeatedly accessing the same URL`
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  url: n.string().format("uri").describe("The URL to fetch content from"),
+  prompt: n.string().describe("The prompt to run on the fetched content")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+IJ1 = "WebFetch"  // Line 25995
+
+// 工具对象定义 (Line 49897)
+{
+  name: IJ1,
+  async description() {
+    return Na0
+  },
+  inputSchema: ZI5,
+  userFacingName() {
+    return "WebFetch"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async checkPermissions(A, B) {
+    // 网络访问通常不需要特殊权限
+    return { isAllowed: true }
+  },
+  async validateInput(A, B) {
+    // 验证URL格式
+    try {
+      new URL(A.url)
+    } catch {
+      throw new Error("Invalid URL format")
+    }
+    return A
+  }
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法
+async * call(A, B) {
+  try {
+    // 检查缓存
+    let cachedResult = await checkCache(A.url);
+    if (cachedResult) {
+      yield {
+        type: "text",
+        text: cachedResult
+      };
+      return;
+    }
+    
+    // 获取网页内容
+    let htmlContent = await fetchURL(A.url);
+    
+    // 转换为Markdown
+    let markdownContent = await htmlToMarkdown(htmlContent);
+    
+    // 使用AI处理内容
+    let processedContent = await processWithAI(markdownContent, A.prompt);
+    
+    // 缓存结果
+    await cacheResult(A.url, processedContent, 15 * 60 * 1000); // 15分钟
+    
+    yield {
+      type: "text",
+      text: processedContent
+    }
+  } catch (error) {
+    yield {
+      type: "error",
+      error: `Failed to fetch content: ${error.message}`
+    }
+  }
+}
+```
+
+## 网页处理流程
+
+### 1. URL处理
+```javascript
+// URL标准化和验证
+function normalizeURL(url) {
+  // HTTP自动升级为HTTPS
+  if (url.startsWith('http://')) {
+    url = url.replace('http://', 'https://');
+  }
+  
+  // 验证URL格式
+  return new URL(url);
+}
+```
+
+### 2. 内容获取
+```javascript
+// 网页内容获取
+async function fetchWebContent(url) {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Claude Code WebFetch Tool',
+      'Accept': 'text/html,application/xhtml+xml'
+    },
+    timeout: 30000
+  });
+  
+  return await response.text();
+}
+```
+
+### 3. 格式转换
+```javascript
+// HTML到Markdown转换
+async function convertToMarkdown(html) {
+  // 清理HTML
+  const cleanHtml = cleanupHTML(html);
+  
+  // 转换为Markdown
+  const markdown = htmlToMarkdown(cleanHtml);
+  
+  // 优化格式
+  return optimizeMarkdown(markdown);
+}
+```
+
+## AI内容处理
+
+### 1. 模型选择
+- **快速模型**: 使用小型、快速的AI模型进行内容处理
+- **效率优化**: 平衡处理质量和响应速度
+- **成本控制**: 使用成本效益高的模型
+
+### 2. 提示处理
+```javascript
+// AI提示构建
+function buildAIPrompt(content, userPrompt) {
+  return `
+    Analyze the following web content and ${userPrompt}
+    
+    Web Content:
+    ${content}
+    
+    Please provide a focused response based on the user's request.
+  `;
+}
+```
+
+### 3. 内容分析
+- **信息提取**: 根据用户提示提取相关信息
+- **内容总结**: 对大量内容进行智能总结
+- **结构化**: 将信息组织成结构化格式
+
+## 缓存机制
+
+### 1. 自清理缓存
+```javascript
+// 15分钟自清理缓存
+const CACHE_DURATION = 15 * 60 * 1000; // 15分钟
+
+class WebFetchCache {
+  constructor() {
+    this.cache = new Map();
+    this.timers = new Map();
+  }
+  
+  set(url, content) {
+    this.cache.set(url, content);
+    
+    // 设置自动清理
+    const timer = setTimeout(() => {
+      this.delete(url);
+    }, CACHE_DURATION);
+    
+    this.timers.set(url, timer);
+  }
+  
+  get(url) {
+    return this.cache.get(url);
+  }
+  
+  delete(url) {
+    this.cache.delete(url);
+    if (this.timers.has(url)) {
+      clearTimeout(this.timers.get(url));
+      this.timers.delete(url);
+    }
+  }
+}
+```
+
+### 2. 缓存策略
+- **时间窗口**: 15分钟的缓存有效期
+- **自动清理**: 避免内存泄漏
+- **重复访问**: 提高重复访问的响应速度
+
+## 安全机制
+
+### 1. URL安全
+- **HTTPS升级**: 自动将HTTP升级为HTTPS
+- **URL验证**: 严格的URL格式验证
+- **域名检查**: 防止访问恶意域名
+
+### 2. 内容安全
+- **内容过滤**: 过滤恶意或不适当的内容
+- **大小限制**: 限制处理的内容大小
+- **超时控制**: 防止长时间等待
+
+### 3. 隐私保护
+- **无状态**: 不保存用户的个人信息
+- **临时缓存**: 短期缓存自动清理
+- **匿名访问**: 不携带用户标识信息
+
+## 使用场景
+
+### 1. 技术文档获取
+```javascript
+// 获取API文档
+url: "https://api.example.com/docs"
+prompt: "Extract all available API endpoints and their parameters"
+```
+
+### 2. 内容分析
+```javascript
+// 分析文章内容
+url: "https://blog.example.com/article"
+prompt: "Summarize the main points and key takeaways from this article"
+```
+
+### 3. 数据研究
+```javascript
+// 研究技术趋势
+url: "https://research.example.com/report"
+prompt: "Extract statistics and trends mentioned in this research report"
+```
+
+## 与MCP工具的关系
+
+### 1. 优先级说明
+```
+"IMPORTANT: If an MCP-provided web fetch tool is available, prefer using that tool instead of this one, as it may have fewer restrictions. All MCP-provided tools start with 'mcp__'."
+```
+
+### 2. 工具选择策略
+- **MCP优先**: 优先使用MCP提供的网络工具
+- **备选方案**: WebFetch作为备选方案
+- **功能补充**: 在MCP工具不可用时提供网络访问能力
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true
+- **缓存优化**: 15分钟缓存减少重复请求
+- **超时控制**: 防止长时间阻塞
+
+## 错误处理
+
+### 1. 网络错误
+- 连接超时
+- DNS解析失败
+- 服务器错误响应
+
+### 2. 内容错误
+- 无效的HTML格式
+- 内容过大
+- 编码问题
+
+### 3. 处理错误
+- AI模型处理失败
+- 格式转换错误
+- 缓存操作失败
+
+## 最佳实践
+
+### 1. URL选择
+- 使用可靠的网站源
+- 确保URL的有效性
+- 选择内容丰富的页面
+
+### 2. 提示设计
+- 明确指定需要提取的信息
+- 避免过于宽泛的提示
+- 考虑网页内容的特点
+
+### 3. 性能优化
+- 利用缓存机制避免重复请求
+- 选择内容相对稳定的页面
+- 考虑网络延迟和响应时间
+
+## 架构地位
+WebFetch工具是Claude Code网络访问能力的重要组成部分，为AI提供了获取和分析实时网络内容的能力。它体现了Claude Code从本地工具向网络化工具的扩展，支持更广泛的信息获取和分析场景。
+
+## 技术特点
+1. **智能处理**: AI驱动的内容分析和提取
+2. **格式优化**: HTML到Markdown的智能转换
+3. **缓存机制**: 高效的15分钟自清理缓存
+4. **安全访问**: HTTPS升级和安全验证
+5. **MCP兼容**: 与MCP工具生态的良好集成

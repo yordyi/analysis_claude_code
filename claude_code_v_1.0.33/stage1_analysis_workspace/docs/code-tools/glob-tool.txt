@@ -1,0 +1,297 @@
+# Glob Tool (FJ1)
+
+## 基本信息
+- **工具名称**: Glob
+- **内部常量**: FJ1 = "Glob"
+- **文件位置**: improved-claude-code-5.mjs:26618
+- **工具类型**: 文件模式匹配工具
+
+## 代码运行时机
+- **触发条件**: 用户需要根据模式查找文件时
+- **调用场景**: 
+  - 按文件名模式搜索文件
+  - 批量文件操作前的文件收集
+  - 特定类型文件的发现
+  - 项目结构分析
+  - 文件清理和组织
+- **执行路径**: 用户请求 → 模式解析 → Glob工具调用 → 文件系统扫描 → 结果排序
+
+## 系统运转时机
+- **生命周期**: 查询级别，每次模式匹配独立执行
+- **优先级**: 高优先级，基础搜索工具
+- **持续性**: 单次执行，结果用于当前对话上下文
+
+## 作用时机
+- **模式预处理**: 解析和验证glob模式
+- **路径扫描**: 在指定目录中递归搜索
+- **匹配过滤**: 应用模式过滤文件
+- **结果排序**: 按修改时间排序匹配结果
+
+## 作用目的
+1. **文件发现**: 根据模式快速找到目标文件
+2. **批量操作**: 为批量文件操作提供文件列表
+3. **项目分析**: 分析项目中特定类型的文件
+4. **代码搜索**: 在特定文件类型中搜索代码
+5. **文件组织**: 帮助理解和组织项目文件结构
+
+## 具体作用
+- **模式匹配**: 支持通配符和复杂模式匹配
+- **递归搜索**: 在目录树中递归查找文件
+- **类型过滤**: 按文件扩展名过滤
+- **路径匹配**: 支持完整路径的模式匹配
+- **结果优化**: 按相关性和时间排序结果
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 26618)
+vc1 = "- Fast file pattern matching tool that works with any codebase size\n- Supports glob patterns like \"**/*.js\" or \"src/**/*.ts\"\n- Returns matching file paths sorted by modification time\n- Use this tool when you need to find files by name patterns\n- When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead\n- You have the capability to call multiple tools in a single response. It is always better to speculatively perform multiple searches as a batch that are potentially useful."
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  pattern: n.string().describe("The glob pattern to match files against"),
+  path: n.string().optional().describe("The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for the default behavior. Must be a valid directory path if provided.")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+FJ1 = "Glob"  // Line 26618
+
+// 工具对象定义
+{
+  name: FJ1,
+  async description() {
+    return vc1
+  },
+  inputSchema: wZ5,
+  userFacingName() {
+    return "Glob"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async checkPermissions(A, B) {
+    let Q = A.path || process.cwd();
+    return await AX5(Q, B)
+  }
+}
+```
+
+## Glob模式支持
+
+### 1. 基本通配符
+```javascript
+// 基本模式示例
+"*.js"          // 当前目录下所有.js文件
+"*.{js,ts}"     // 当前目录下所有.js和.ts文件
+"test_*.py"     // 以test_开头的.py文件
+"[0-9]*.txt"    // 以数字开头的.txt文件
+```
+
+### 2. 递归模式
+```javascript
+// 递归搜索模式
+"**/*.js"           // 所有目录下的.js文件
+"src/**/*.ts"       // src目录下所有.ts文件
+"**/test/**/*.py"   // 任何test目录下的.py文件
+"lib/**/index.js"   // lib下任何层级的index.js
+```
+
+### 3. 复杂模式
+```javascript
+// 复杂匹配模式
+"src/**/{component,util}/*.tsx"  // 特定目录下的.tsx文件
+"**/*.{test,spec}.{js,ts}"       // 测试文件模式
+"!node_modules/**"               // 排除模式(如果支持)
+"src/**/*.ts"                    // TypeScript源文件
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法
+async * call(A, B) {
+  let Q = A.path || process.cwd();
+  
+  let I = await V2(Q, B.userId);
+  if (!I.isAllowed) {
+    yield {
+      type: "error",
+      error: I.denialReason
+    };
+    return
+  }
+  
+  let G = await dY5(A.pattern, Q, B);
+  yield {
+    type: "text",
+    text: formatGlobResults(G)
+  }
+}
+```
+
+## 搜索策略
+
+### 1. 目录处理
+- **默认目录**: 如果未指定path，使用当前工作目录
+- **路径验证**: 验证指定路径的存在性和权限
+- **递归深度**: 智能控制递归深度防止性能问题
+
+### 2. 模式优化
+- **模式预编译**: 预编译glob模式提高性能
+- **早期终止**: 在大型项目中智能终止搜索
+- **缓存机制**: 缓存常用模式的搜索结果
+
+### 3. 结果处理
+- **修改时间排序**: 按文件修改时间排序结果
+- **相关性评分**: 根据模式匹配度评分
+- **路径标准化**: 统一路径格式和表示
+
+## 性能优化
+
+### 1. 大型代码库支持
+```
+"Fast file pattern matching tool that works with any codebase size"
+```
+
+### 2. 批量搜索建议
+```
+"It is always better to speculatively perform multiple searches as a batch that are potentially useful"
+```
+
+### 3. 智能搜索引导
+```
+"When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead"
+```
+
+## 与其他工具的协作
+
+### 1. 与Grep工具配合
+```javascript
+// 典型工作流
+1. Glob找到目标文件类型
+2. Grep在这些文件中搜索内容
+3. Read读取具体文件内容
+```
+
+### 2. 与LS工具的差异
+| 方面 | Glob工具 | LS工具 |
+|------|----------|--------|
+| 搜索方式 | 模式匹配 | 目录列表 |
+| 搜索范围 | 递归搜索 | 单层目录 |
+| 结果过滤 | 模式过滤 | ignore模式 |
+| 适用场景 | 文件查找 | 目录浏览 |
+
+### 3. 替代Bash find命令
+```
+Bash工具指导中明确要求：
+"You MUST avoid using search commands like `find` and `grep`. Instead use Grep, Glob, or Task to search."
+```
+
+## 使用场景示例
+
+### 1. 代码文件搜索
+```javascript
+// 查找所有TypeScript组件
+pattern: "src/components/**/*.tsx"
+
+// 查找所有测试文件
+pattern: "**/*.{test,spec}.{js,ts,jsx,tsx}"
+
+// 查找配置文件
+pattern: "**/{*.config.js,*.json,.*rc}"
+```
+
+### 2. 项目分析
+```javascript
+// 查找所有源代码文件
+pattern: "src/**/*.{js,ts,jsx,tsx}"
+
+// 查找文档文件
+pattern: "**/*.{md,txt,rst}"
+
+// 查找构建文件
+pattern: "**/{package.json,*.toml,Cargo.toml,pom.xml}"
+```
+
+### 3. 清理和维护
+```javascript
+// 查找临时文件
+pattern: "**/*.{tmp,log,cache}"
+
+// 查找大文件
+pattern: "**/*.{zip,tar,gz,img,iso}"
+
+// 查找空目录标记文件
+pattern: "**/.gitkeep"
+```
+
+## 错误处理
+
+### 1. 模式错误
+- 无效的glob模式语法
+- 模式过于复杂导致性能问题
+- 空模式或无效字符
+
+### 2. 路径错误
+- 指定路径不存在
+- 路径权限不足
+- 无效的路径格式
+
+### 3. 系统错误
+- 文件系统访问错误
+- 内存不足
+- 搜索超时
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true
+- **大型代码库**: 专门优化支持大型项目
+- **快速搜索**: 优化的模式匹配算法
+
+## 最佳实践
+
+### 1. 模式设计
+- 使用具体的文件扩展名
+- 避免过于宽泛的模式
+- 合理使用递归搜索
+
+### 2. 性能优化
+- 指定搜索起始目录
+- 使用批量搜索
+- 避免重复搜索
+
+### 3. 工具选择
+- 已知文件类型时使用Glob
+- 需要内容搜索时配合Grep
+- 探索性浏览时使用LS
+
+## 安全机制
+
+### 1. 路径安全
+- 路径权限验证
+- 防止路径遍历攻击
+- 敏感目录保护
+
+### 2. 资源控制
+- 搜索深度限制
+- 结果数量限制
+- 超时保护机制
+
+### 3. 权限集成
+- 用户级别权限检查
+- 目录访问控制
+- 动态权限评估
+
+## 架构地位
+Glob工具是Claude Code文件发现和搜索功能的核心组件，与Grep、LS等工具共同构成了完整的文件查找体系。它专门优化了大型代码库的搜索性能，是代码分析和项目理解的重要工具。
+
+## 技术特点
+1. **高性能**: 专门优化的大型代码库搜索能力
+2. **模式丰富**: 支持复杂的glob模式匹配
+3. **智能排序**: 按修改时间和相关性排序
+4. **批量友好**: 支持批量搜索操作
+5. **工具协作**: 与其他工具的良好集成设计
