@@ -1,5 +1,10 @@
 # Claude Code 逆向工程研究仓库
 
+## 通知
+<img width="360" height="360" alt="image" src="https://github.com/user-attachments/assets/10664e2e-36c8-4e29-b740-f5d06e71c1be" />
+  
+相关解析文章已经二次核对提取整理后发布在ShareAI lab的官方公众号上. 
+
 ## 📋 项目概述
 
 本仓库是对 Claude Code v1.0.33 进行深度逆向工程分析的完整研究资料库。通过对混淆源代码的系统性分析，我们揭示了这个现代AI编程助手的核心架构设计、实现机制和运行逻辑。
