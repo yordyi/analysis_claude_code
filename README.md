@@ -2,7 +2,8 @@
 
 ## 通知
 <img width="360" height="360" alt="image" src="https://github.com/user-attachments/assets/10664e2e-36c8-4e29-b740-f5d06e71c1be" />
-  
+<img width="360" height="360" alt="image" src="https://github.com/user-attachments/assets/9813fca0-a6dd-4813-972e-f9bf6d62add8" />
+
 相关解析文章已经二次核对提取整理后发布在ShareAI lab的官方公众号上. 
 
 ## 📋 项目概述
