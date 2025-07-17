@@ -1,0 +1,374 @@
+# Grep Tool (XJ1)
+
+## 基本信息
+- **工具名称**: Grep
+- **内部常量**: XJ1 = "Grep"
+- **文件位置**: improved-claude-code-5.mjs:26627
+- **工具类型**: 内容搜索工具
+
+## 代码运行时机
+- **触发条件**: 用户需要在文件内容中搜索特定模式时
+- **调用场景**: 
+  - 代码中搜索函数或变量定义
+  - 查找特定的错误信息或日志
+  - 搜索配置项或常量
+  - 代码审查和分析
+  - API使用情况统计
+- **执行路径**: 用户请求 → 模式解析 → Grep工具调用 → 文件内容扫描 → 匹配结果返回
+
+## 系统运转时机
+- **生命周期**: 查询级别，每次内容搜索独立执行
+- **优先级**: 高优先级，核心搜索工具
+- **持续性**: 单次执行，结果用于当前对话上下文
+
+## 作用时机
+- **模式编译**: 编译正则表达式模式
+- **文件过滤**: 根据include参数过滤目标文件
+- **内容扫描**: 在文件内容中搜索匹配模式
+- **结果聚合**: 收集并排序匹配结果
+
+## 作用目的
+1. **内容发现**: 在大量文件中快速找到包含特定内容的文件
+2. **代码分析**: 分析代码中的模式和结构
+3. **问题诊断**: 快速定位错误信息和异常
+4. **使用统计**: 统计特定API或功能的使用情况
+5. **重构支持**: 为代码重构提供影响分析
+
+## 具体作用
+- **正则匹配**: 使用正则表达式进行内容匹配
+- **文件过滤**: 按文件类型或模式过滤搜索范围
+- **多文件搜索**: 在多个文件中并行搜索
+- **上下文提取**: 提供匹配行的上下文信息
+- **结果排序**: 按修改时间排序匹配文件
+
+## 描述生成函数
+```javascript
+// bc1函数生成工具描述 (Line 26627+)
+function bc1() {
+  return `
+- Fast content search tool that works with any codebase size
+- Searches file contents using regular expressions
+- Supports full regex syntax (eg. "log.*Error", "function\\s+\\w+", etc.)
+- Filter files by pattern with the include parameter (eg. "*.js", "*.{ts,tsx}")
+- Returns file paths with at least one match sorted by modification time
+- Use this tool when you need to find files containing specific patterns
+- If you need to identify/count the number of matches within files, use the Bash tool with \`rg\` (ripgrep) directly. Do NOT use \`grep\`.
+- When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead`
+}
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  pattern: n.string().describe("The regular expression pattern to search for in file contents"),
+  path: n.string().optional().describe("The directory to search in. Defaults to the current working directory."),
+  include: n.string().optional().describe("File pattern to include in the search (e.g. \"*.js\", \"*.{ts,tsx}\")")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+XJ1 = "Grep"  // Line 26627
+
+// 工具对象定义
+{
+  name: XJ1,
+  async description() {
+    return bc1()
+  },
+  inputSchema: zZ5,
+  userFacingName() {
+    return "Grep"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async checkPermissions(A, B) {
+    let Q = A.path || process.cwd();
+    return await AX5(Q, B)
+  }
+}
+```
+
+## 正则表达式支持
+
+### 1. 基本模式
+```javascript
+// 简单字符串匹配
+"console.log"           // 查找console.log调用
+"function"              // 查找function关键字
+"import.*from"          // 查找import语句
+"export.*default"       // 查找export default
+```
+
+### 2. 高级正则模式
+```javascript
+// 复杂正则表达式
+"function\\s+\\w+"         // 函数定义
+"class\\s+[A-Z]\\w*"       // 类定义
+"const\\s+\\w+\\s*="       // 常量定义
+"\\berror\\b"              // 单词边界匹配
+"(TODO|FIXME|XXX)"         // 多选匹配
+```
+
+### 3. 特殊用途模式
+```javascript
+// 特定用途的搜索模式
+"log.*Error"               // 日志错误
+"\\d+\\.\\d+\\.\\d+"      // 版本号
+"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"  // 邮箱地址
+"https?://[^\\s]+"         // URL匹配
+```
+
+## 文件过滤机制
+
+### 1. Include模式
+```javascript
+// 文件类型过滤
+include: "*.js"              // 只搜索JavaScript文件
+include: "*.{ts,tsx}"        // TypeScript文件
+include: "*.{py,pyw}"        // Python文件
+include: "*.{md,txt,rst}"    // 文档文件
+```
+
+### 2. 复杂过滤
+```javascript
+// 复杂的文件过滤模式
+include: "src/**/*.{js,ts}"     // src目录下的JS/TS文件
+include: "test/**/*.spec.js"    // 测试规范文件
+include: "**/*.config.{js,json}" // 配置文件
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法
+async * call(A, B) {
+  let Q = A.path || process.cwd();
+  
+  let I = await V2(Q, B.userId);
+  if (!I.isAllowed) {
+    yield {
+      type: "error",
+      error: I.denialReason
+    };
+    return
+  }
+  
+  let G = await eY5(A.pattern, Q, A.include, B);
+  yield {
+    type: "text",
+    text: formatGrepResults(G)
+  }
+}
+```
+
+## 性能优化策略
+
+### 1. 大型代码库支持
+```
+"Fast content search tool that works with any codebase size"
+```
+
+### 2. 智能搜索引导
+```
+"When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead"
+```
+
+### 3. Ripgrep集成建议
+```
+"If you need to identify/count the number of matches within files, use the Bash tool with `rg` (ripgrep) directly. Do NOT use `grep`."
+```
+
+## 搜索策略
+
+### 1. 文件预过滤
+- 根据include模式先过滤文件
+- 跳过二进制文件和大型文件
+- 智能排除构建输出和依赖目录
+
+### 2. 内容搜索
+- 逐行正则表达式匹配
+- 早期匹配终止优化
+- 内存高效的流式处理
+
+### 3. 结果聚合
+- 按文件路径组织结果
+- 按修改时间排序匹配文件
+- 提供匹配统计信息
+
+## 与其他工具的协作
+
+### 1. 与Glob工具配合
+```javascript
+// 典型工作流
+1. Glob找到候选文件
+2. Grep在这些文件中搜索内容
+3. Read读取具体匹配文件
+```
+
+### 2. 与Bash工具的关系
+```
+Bash工具指导明确要求：
+"You MUST avoid using search commands like `find` and `grep`. Instead use Grep, Glob, or Task to search."
+"If you _still_ need to run `grep`, STOP. ALWAYS USE ripgrep at `rg` first"
+```
+
+### 3. 替代传统grep
+- 更快的搜索性能
+- 更好的错误处理
+- 集成的权限管理
+
+## 使用场景示例
+
+### 1. 代码分析
+```javascript
+// 查找函数定义
+pattern: "function\\s+\\w+"
+include: "*.js"
+
+// 查找类定义
+pattern: "class\\s+[A-Z]\\w*"
+include: "*.{js,ts,tsx}"
+
+// 查找导入语句
+pattern: "import.*from\\s+['\"].*['\"]"
+include: "*.{js,ts,jsx,tsx}"
+```
+
+### 2. 错误诊断
+```javascript
+// 查找错误日志
+pattern: "(error|Error|ERROR)"
+include: "*.log"
+
+// 查找TODO注释
+pattern: "(TODO|FIXME|XXX|HACK)"
+include: "*.{js,ts,py,java,cpp}"
+
+// 查找调试代码
+pattern: "(console\\.log|debugger|pdb\\.set_trace)"
+include: "*.{js,ts,py}"
+```
+
+### 3. API使用分析
+```javascript
+// 查找特定API使用
+pattern: "useState|useEffect|useContext"
+include: "*.{jsx,tsx}"
+
+// 查找数据库查询
+pattern: "SELECT|INSERT|UPDATE|DELETE"
+include: "*.{sql,js,py}"
+
+// 查找网络请求
+pattern: "fetch|axios|request"
+include: "*.{js,ts}"
+```
+
+## 结果格式
+
+### 1. 文件列表格式
+```
+Found matches in the following files:
+- src/components/Header.tsx (modified: 2024-01-15)
+- src/utils/helpers.js (modified: 2024-01-14)
+- tests/unit/api.test.js (modified: 2024-01-13)
+```
+
+### 2. 详细匹配信息
+```
+Matches found:
+src/components/Header.tsx:
+  Line 15: function HeaderComponent() {
+  Line 23: function handleClick() {
+
+src/utils/helpers.js:
+  Line 8: function formatDate(date) {
+  Line 34: function validateEmail(email) {
+```
+
+## 错误处理
+
+### 1. 模式错误
+- 无效的正则表达式语法
+- 过于复杂的正则表达式
+- 空搜索模式
+
+### 2. 文件系统错误
+- 搜索路径不存在
+- 权限不足
+- 文件访问错误
+
+### 3. 性能错误
+- 搜索超时
+- 内存使用过多
+- 结果集过大
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true
+- **大型代码库**: 专门优化支持大型项目
+- **正则优化**: 高效的正则表达式引擎
+
+## 高级功能
+
+### 1. 上下文搜索
+- 提供匹配行的上下文
+- 显示行号信息
+- 突出显示匹配内容
+
+### 2. 统计功能
+- 匹配文件数量
+- 总匹配次数
+- 文件大小统计
+
+### 3. 过滤选项
+- 大小写敏感/不敏感
+- 单词边界匹配
+- 多行模式支持
+
+## 最佳实践
+
+### 1. 模式设计
+- 使用具体的正则表达式
+- 避免过于宽泛的搜索
+- 合理使用字符类和量词
+
+### 2. 性能优化
+- 指定文件类型过滤
+- 使用具体的搜索路径
+- 避免复杂的正则表达式
+
+### 3. 工具选择
+- 内容搜索使用Grep
+- 文件名搜索使用Glob
+- 精确计数使用ripgrep
+
+## 安全机制
+
+### 1. 模式安全
+- 正则表达式复杂度限制
+- 防止ReDoS攻击
+- 模式预验证
+
+### 2. 文件安全
+- 权限检查集成
+- 敏感文件跳过
+- 二进制文件检测
+
+### 3. 资源控制
+- 搜索时间限制
+- 内存使用监控
+- 结果大小限制
+
+## 架构地位
+Grep工具是Claude Code内容搜索功能的核心，与Glob工具共同构成了完整的代码搜索体系。它专门为大型代码库优化了性能，支持复杂的正则表达式搜索，是代码分析、调试和重构的重要工具。
+
+## 技术特点
+1. **正则强大**: 完整的正则表达式语法支持
+2. **高性能**: 大型代码库优化的搜索引擎
+3. **智能过滤**: 灵活的文件类型过滤机制
+4. **结果排序**: 按相关性和时间排序
+5. **工具集成**: 与ripgrep等外部工具的良好集成

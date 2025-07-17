@@ -1,0 +1,264 @@
+# LS Tool (VJ1)
+
+## 基本信息
+- **工具名称**: LS
+- **内部常量**: VJ1 = "LS"
+- **文件位置**: improved-claude-code-5.mjs:26642, 37004
+- **工具类型**: 目录列表工具
+
+## 代码运行时机
+- **触发条件**: 用户需要查看目录内容时
+- **调用场景**: 
+  - 项目结构探索
+  - 文件存在性检查
+  - 目录内容浏览
+  - 文件系统导航
+  - 与其他工具配合的路径验证
+- **执行路径**: 用户请求 → 路径验证 → LS工具调用 → 目录扫描 → 结果格式化
+
+## 系统运转时机
+- **生命周期**: 请求级别，每次目录查询独立执行
+- **优先级**: 高优先级，基础工具
+- **持续性**: 单次执行，结果用于当前对话上下文
+
+## 作用时机
+- **路径预检**: 在其他文件操作前验证目录结构
+- **权限验证**: 检查目录访问权限
+- **结构扫描**: 获取目录下的文件和子目录列表
+- **过滤处理**: 根据ignore模式过滤不需要的文件
+
+## 作用目的
+1. **目录浏览**: 提供安全的目录内容查看能力
+2. **结构理解**: 帮助理解项目和文件系统结构
+3. **路径验证**: 验证路径存在性和可访问性
+4. **文件发现**: 发现特定目录下的文件和子目录
+5. **过滤控制**: 通过ignore模式控制显示内容
+
+## 具体作用
+- **目录扫描**: 读取指定目录下的所有条目
+- **权限检查**: 验证目录访问权限
+- **模式过滤**: 应用glob模式过滤文件
+- **结果排序**: 按照特定规则排序目录内容
+- **格式化输出**: 提供用户友好的目录树格式
+
+## 参数架构
+```javascript
+VZ5 = n.strictObject({
+  path: n.string().describe("The absolute path to the directory to list (must be absolute, not relative)"),
+  ignore: n.array(n.string()).optional().describe("List of glob patterns to ignore")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+VJ1 = "LS"  // Line 26642
+
+// 工具对象定义 (Line 37004)
+{
+  name: VJ1,
+  async description() {
+    return "Lists files and directories in a given path. The path parameter must be an absolute path, not a relative path. You can optionally provide an array of glob patterns to ignore with the ignore parameter. You should generally prefer the Glob and Grep tools, if you know which directories to search."
+  },
+  inputSchema: VZ5,
+  userFacingName() {
+    return "LS"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async checkPermissions(A, B) {
+    return await AX5(A.path, B)
+  }
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法
+async * call(A, B) {
+  let Q = await V2(A.path, B.userId);
+  if (!Q.isAllowed) {
+    yield {
+      type: "error",
+      error: Q.denialReason
+    };
+    return
+  }
+  
+  let I = await BX5(A.path, A.ignore, B);
+  yield {
+    type: "text",
+    text: I
+  }
+}
+```
+
+## 路径处理机制
+
+### 1. 绝对路径要求
+- **强制约束**: 只接受绝对路径，拒绝相对路径
+- **安全考虑**: 防止路径遍历攻击
+- **一致性**: 与其他工具保持路径处理一致性
+
+### 2. 路径验证流程
+```javascript
+// 路径验证逻辑
+async function validatePath(path) {
+  if (!path.startsWith('/')) {
+    throw new Error('Path must be absolute, not relative');
+  }
+  
+  if (!await pathExists(path)) {
+    throw new Error('Directory does not exist');
+  }
+  
+  if (!await isDirectory(path)) {
+    throw new Error('Path is not a directory');
+  }
+}
+```
+
+## 过滤机制
+
+### 1. Ignore模式支持
+```javascript
+// Glob模式过滤
+ignore: [
+  "node_modules",      // 排除依赖目录
+  "*.log",            // 排除日志文件
+  ".git",             // 排除Git目录
+  "dist",             // 排除构建输出
+  "coverage"          // 排除测试覆盖率
+]
+```
+
+### 2. 默认过滤规则
+- 隐藏文件处理策略
+- 系统文件自动过滤
+- 大型目录智能跳过
+
+## 输出格式
+
+### 1. 目录树结构
+```
+- /Users/user/project/
+  - src/
+    - components/
+      - Header.tsx
+      - Footer.tsx
+    - utils/
+      - helpers.ts
+  - tests/
+    - unit/
+    - integration/
+  - package.json
+  - README.md
+```
+
+### 2. 元数据信息
+- 文件类型标识 (文件/目录)
+- 权限信息
+- 大小信息 (如果可用)
+- 修改时间 (如果需要)
+
+## 权限集成
+
+### 1. 权限检查
+```javascript
+async checkPermissions(A, B) {
+  return await AX5(A.path, B)  // 使用通用权限检查
+}
+```
+
+### 2. 访问控制
+- 用户级别的目录访问控制
+- 敏感目录的保护机制
+- 动态权限评估
+
+## 工具协作
+
+### 1. 与Read工具协作
+```javascript
+// 典型协作模式
+1. LS查看目录结构
+2. Read读取特定文件内容
+3. 重复直到获得所需信息
+```
+
+### 2. 与Glob工具协作
+```javascript
+// 搜索优化建议
+"You should generally prefer the Glob and Grep tools, if you know which directories to search."
+```
+
+### 3. 与Bash工具边界
+- **禁用ls命令**: Bash工具指导中明确禁止使用系统ls命令
+- **强制使用LS**: 必须使用LS工具而不是shell ls
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true
+- **缓存友好**: 结果可在对话上下文中缓存
+- **轻量级**: 快速的目录扫描操作
+
+## 错误处理
+
+### 1. 路径错误
+- 不存在的路径
+- 非目录路径
+- 相对路径使用
+
+### 2. 权限错误
+- 访问被拒绝的目录
+- 用户权限不足
+- 系统级别的访问限制
+
+### 3. 系统错误
+- 文件系统错误
+- I/O错误
+- 网络文件系统问题
+
+## 使用最佳实践
+
+### 1. 路径规范
+- 始终使用绝对路径
+- 使用正斜杠 (/) 作为路径分隔符
+- 避免特殊字符和空格
+
+### 2. 过滤优化
+- 合理使用ignore模式减少输出
+- 排除大型依赖目录
+- 专注于相关文件和目录
+
+### 3. 工具选择
+- 已知搜索目标时优先使用Glob/Grep
+- 探索性浏览时使用LS
+- 与Read工具配合进行深入分析
+
+## 安全机制
+
+### 1. 路径安全
+- 绝对路径强制要求
+- 路径遍历防护
+- 符号链接处理
+
+### 2. 权限控制
+- 用户级别访问控制
+- 目录级别权限检查
+- 敏感目录保护
+
+### 3. 输出安全
+- 敏感信息过滤
+- 大量输出限制
+- 恶意文件名处理
+
+## 架构地位
+LS工具是Claude Code文件系统交互的重要组成部分，为用户提供了安全、直观的目录浏览能力。它与Read、Glob、Grep等工具形成了完整的文件系统操作工具链，是文件探索和项目理解的基础工具。
+
+## 技术特点
+1. **安全设计**: 强制绝对路径和权限检查
+2. **高效过滤**: 灵活的glob模式过滤系统
+3. **用户友好**: 清晰的目录树格式输出
+4. **工具协作**: 与其他文件工具的良好集成
+5. **性能优化**: 并发安全和缓存友好的设计

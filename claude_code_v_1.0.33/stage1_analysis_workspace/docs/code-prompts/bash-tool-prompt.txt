@@ -1,0 +1,192 @@
+# Bash Tool Comprehensive Prompt (xa0 function)
+
+## 基本信息
+- **文件位置**: improved-claude-code-5.mjs:26696-26791
+- **函数名**: xa0(A, B, Q, I, G, Z)
+- **提示词类型**: Bash工具使用指导和安全规范
+
+## 运行时机
+- **触发条件**: 当Bash工具被包含在可用工具列表中时
+- **调用场景**: 
+  - 工具描述生成时
+  - 用户需要执行命令行操作时
+  - 系统需要说明Bash工具使用规则时
+- **执行路径**: 工具初始化 → 工具描述生成 → xa0调用
+
+## 系统运转时机
+- **生命周期**: 工具级别，在Bash工具可用期间持续有效
+- **优先级**: 高优先级，涉及系统安全和稳定性
+- **持续性**: 在所有Bash操作中持续约束行为
+
+## 作用时机
+- **工具使用前**: 在执行任何Bash命令前提供指导
+- **安全检查**: 在命令执行过程中提供安全约束
+- **最佳实践**: 指导正确的命令行操作方式
+
+## 作用目的
+1. **安全执行**: 确保Bash命令的安全执行
+2. **规范操作**: 建立标准化的命令行操作流程
+3. **错误预防**: 通过规范防止常见的命令行错误
+4. **权限管理**: 建立命令执行的权限框架
+5. **工具替代**: 指导使用更安全的替代工具
+
+## 具体作用
+
+### 安全措施
+1. **目录验证**: 创建文件前验证父目录存在
+2. **路径引号**: 强制对包含空格的路径使用双引号
+3. **工具替代**: 禁用find/grep，推荐使用专用工具
+4. **超时控制**: 设置命令执行超时限制
+5. **输出限制**: 限制输出长度防止内存溢出
+
+### 操作规范
+1. **描述要求**: 5-10词的清晰命令描述
+2. **路径规范**: 使用绝对路径避免cd使用
+3. **命令链接**: 使用';'或'&&'连接多个命令
+4. **ripgrep优先**: 强制使用rg替代grep
+
+## 提示词内容（核心部分）
+```
+Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
+
+Before executing the command, please follow these steps:
+
+1. Directory Verification:
+   - If the command will create new directories or files, first use the LS tool to verify the parent directory exists and is the correct location
+   - For example, before running "mkdir foo/bar", first use LS to check that "foo" exists and is the intended parent directory
+
+2. Command Execution:
+   - Always quote file paths that contain spaces with double quotes (e.g., cd "path with spaces/file.txt")
+   - Examples of proper quoting:
+     - cd "/Users/name/My Documents" (correct)
+     - cd /Users/name/My Documents (incorrect - will fail)
+   - After ensuring proper quoting, execute the command.
+
+Usage notes:
+  - The command argument is required.
+  - You can specify an optional timeout in milliseconds (up to 600000ms / 10 minutes). If not specified, commands will timeout after 120000ms (2 minutes).
+  - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.
+  - If the output exceeds 30000 characters, output will be truncated before being returned to you.
+  - VERY IMPORTANT: You MUST avoid using search commands like `find` and `grep`. Instead use Grep, Glob, or Task to search. You MUST avoid read tools like `cat`, `head`, `tail`, and `ls`, and use Read and LS to read files.
+  - If you _still_ need to run `grep`, STOP. ALWAYS USE ripgrep at `rg` first, which all Claude Code users have pre-installed.
+```
+
+## Git工作流程专门指导
+```
+# Committing changes with git
+
+When the user asks you to create a new git commit, follow these steps carefully:
+
+1. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following bash commands in parallel, each using the Bash tool:
+  - Run a git status command to see all untracked files.
+  - Run a git diff command to see both staged and unstaged changes that will be committed.
+  - Run a git log command to see recent commit messages, so that you can follow this repository's commit message style.
+
+2. Analyze all staged changes (both previously staged and newly added) and draft a commit message:
+  - Summarize the nature of the changes (eg. new feature, enhancement to an existing feature, bug fix, refactoring, test, docs, etc.). 
+  - Check for any sensitive information that shouldn't be committed
+  - Draft a concise (1-2 sentences) commit message that focuses on the "why" rather than the "what"
+
+3. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following commands in parallel:
+   - Add relevant untracked files to the staging area.
+   - Create the commit with a message
+   - Run git status to make sure the commit succeeded.
+
+4. If the commit fails due to pre-commit hook changes, retry the commit ONCE to include these automated changes.
+
+Important notes:
+- NEVER update the git config
+- NEVER run additional commands to read or explore code, besides git bash commands
+- NEVER use the TodoWrite or Task tools
+- DO NOT push to the remote repository unless the user explicitly asks you to do so
+- IMPORTANT: Never use git commands with the -i flag (like git rebase -i or git add -i) since they require interactive input which is not supported.
+```
+
+## Sandbox模式特殊规则
+```
+Note: Errors from incorrect sandbox=true runs annoy the User more than permission prompts. If any part of a command needs write access (e.g. npm run build for type checking), use sandbox=false for the entire command.
+```
+
+## 相关上下文代码
+```javascript
+// Bash工具定义
+function xa0(A, B, Q, I, G, Z) {
+  return `Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
+
+Before executing the command, please follow these steps:
+
+1. Directory Verification:
+   - If the command will create new directories or files, first use the ${I} tool to verify the parent directory exists and is the correct location
+   - For example, before running "mkdir foo/bar", first use ${I} to check that "foo" exists and is the intended parent directory
+
+2. Command Execution:
+   - Always quote file paths that contain spaces with double quotes (e.g., cd "path with spaces/file.txt")
+   [...]
+Usage notes:
+  - The command argument is required.
+  - You can specify an optional timeout in milliseconds (up to ${CJ1()}ms / ${CJ1()/60000} minutes). If not specified, commands will timeout after ${Em()}ms (${Em()/60000} minutes).
+  - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.
+  - If the output exceeds ${KJ1()} characters, output will be truncated before being returned to you.
+  - VERY IMPORTANT: You MUST avoid using search commands like \`find\` and \`grep\`. Instead use ${XJ1}, ${FJ1}, or ${cX} to search. You MUST avoid read tools like \`cat\`, \`head\`, \`tail\`, and \`ls\`, and use ${TD} and ${VJ1} to read files.
+  - If you _still_ need to run \`grep\`, STOP. ALWAYS USE ripgrep at \`rg\` first, which all ${m0} users have pre-installed.
+  [...]`
+}
+```
+
+## 相关变量和依赖
+- **CJ1()**: 最大超时时间函数
+- **Em()**: 默认超时时间函数  
+- **KJ1()**: 最大输出字符数函数
+- **XJ1**: Grep工具名称
+- **FJ1**: Glob工具名称
+- **cX**: Task工具名称
+- **TD**: Read工具名称
+- **VJ1**: LS工具名称
+- **m0**: Claude Code产品名称
+
+## 安全检查层次
+
+### 1. 预执行检查
+- 目录存在性验证
+- 路径引号检查
+- 命令类型验证
+
+### 2. 执行时约束
+- 超时时间限制
+- 输出长度限制
+- 并发控制
+
+### 3. 工具替代强制
+- 禁用find → 使用Glob
+- 禁用grep → 使用Grep/rg
+- 禁用cat/head/tail → 使用Read
+- 禁用ls → 使用LS
+
+### 4. Git特殊流程
+- 并行信息收集
+- 提交消息规范
+- 钩子处理
+- 配置保护
+
+## 权限和沙箱管理
+1. **Sandbox模式**: 读取操作的安全执行
+2. **权限提示**: 写操作的用户确认
+3. **错误权衡**: 在错误和权限提示间平衡
+4. **批量操作**: 相同权限要求的命令批量执行
+
+## 架构地位
+这是Claude Code最重要的系统工具之一，建立了命令行操作的安全框架和最佳实践，是系统与操作系统交互的关键接口。
+
+## 技术特点
+1. **安全优先**: 多层安全检查和约束
+2. **工具生态**: 与其他工具的集成和替代
+3. **用户体验**: 平衡安全性和易用性
+4. **动态配置**: 根据环境动态调整参数
+5. **专业规范**: 符合命令行最佳实践
+
+## 常见使用场景
+- 项目构建和测试
+- Git版本控制操作
+- 文件系统管理
+- 开发环境配置
+- 自动化脚本执行

@@ -1,0 +1,360 @@
+# Todo Management Tools (yG & oN)
+
+## 基本信息
+- **TodoWrite工具名称**: TodoWrite (yG)
+- **TodoRead工具名称**: TodoRead (oN)
+- **文件位置**: improved-claude-code-5.mjs:8968481-8970045, 8971786-8973124
+- **工具类型**: 任务管理和计划工具
+
+---
+
+## TodoWrite Tool (yG)
+
+### 代码运行时机
+- **触发条件**: 用户需要创建、更新或管理任务列表时
+- **调用场景**: 
+  - 规划复杂的开发任务
+  - 跟踪项目进度
+  - 分解大型任务为小步骤
+  - 记录待完成的工作项
+  - 更新任务状态和优先级
+- **执行路径**: 用户请求 → 任务分析 → TodoWrite工具调用 → 任务列表更新 → 状态保存
+
+### 系统运转时机
+- **生命周期**: 会话级别，任务列表在整个会话中持续存在
+- **优先级**: 高优先级，核心项目管理功能
+- **持续性**: 任务状态持久化，跨交互保持
+
+### 作用时机
+- **任务创建**: 在开始复杂工作前创建任务计划
+- **进度更新**: 在完成任务时立即更新状态
+- **计划调整**: 根据工作进展调整任务优先级
+- **状态同步**: 保持任务状态与实际工作进度同步
+
+### 具体作用
+- **任务结构化**: 将复杂工作分解为可管理的任务
+- **优先级管理**: 设置和调整任务优先级
+- **状态跟踪**: 跟踪任务的执行状态
+- **进度可视化**: 提供清晰的工作进度视图
+
+### 参数架构
+```javascript
+// TodoWrite参数模式
+JL6 = n.strictObject({
+  todos: GJ1.describe("The updated todo list")
+})
+
+// 任务项结构
+GJ1 = n.array(
+  n.strictObject({
+    content: n.string().minLength(1),
+    status: n.enum(["pending", "in_progress", "completed"]),
+    priority: n.enum(["high", "medium", "low"]), 
+    id: n.string()
+  })
+)
+```
+
+---
+
+## TodoRead Tool (oN)
+
+### 代码运行时机
+- **触发条件**: 用户需要查看当前任务状态时
+- **调用场景**: 
+  - 检查当前工作进度
+  - 规划下一步工作
+  - 确认任务完成状态
+  - 了解待处理任务
+  - 评估工作量和优先级
+- **执行路径**: 用户请求 → TodoRead工具调用 → 任务列表检索 → 格式化显示
+
+### 系统运转时机
+- **生命周期**: 查询级别，每次查看独立执行
+- **优先级**: 中等优先级，状态查询功能
+- **持续性**: 实时反映当前任务状态
+
+### 参数架构
+```javascript
+// TodoRead参数模式 - 无需参数
+FL6 = n.strictObject({}, {
+  description: 'No input is required, leave this field blank. NOTE that we do not require a dummy object, placeholder string or a key like "input" or "empty". LEAVE IT BLANK.'
+})
+```
+
+---
+
+## 相关上下文代码
+
+### TodoWrite工具定义
+```javascript
+// TodoWrite工具对象 (Line 8968481)
+yG = {
+  name: "TodoWrite",
+  async description() {
+    return Ta0  // 工具描述常量
+  },
+  async prompt() {
+    return Oa0  // 工具提示常量
+  },
+  inputSchema: JL6,
+  userFacingName() {
+    return "Update Todos"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !1,
+  async call(A, B) {
+    // 更新任务列表
+    await updateTodoList(A.todos, B);
+    yield {
+      type: "text",
+      text: "Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable"
+    }
+  }
+}
+```
+
+### TodoRead工具定义
+```javascript
+// TodoRead工具对象 (Line 8971786)
+oN = {
+  name: "TodoRead",
+  async description() {
+    return ya0  // 工具描述常量
+  },
+  async prompt() {
+    return ja0  // 工具提示常量
+  },
+  inputSchema: FL6,
+  userFacingName() {
+    return "Read Todos"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async call(A, B) {
+    // 读取当前任务列表
+    let todos = await getCurrentTodos(B);
+    yield {
+      type: "text",
+      text: formatTodoList(todos)
+    }
+  }
+}
+```
+
+## 任务状态管理
+
+### 1. 任务状态类型
+```javascript
+// 三种基本状态
+const TaskStatus = {
+  PENDING: "pending",        // 待处理
+  IN_PROGRESS: "in_progress", // 进行中
+  COMPLETED: "completed"      // 已完成
+}
+```
+
+### 2. 优先级系统
+```javascript
+// 三级优先级
+const TaskPriority = {
+  HIGH: "high",      // 高优先级
+  MEDIUM: "medium",  // 中等优先级
+  LOW: "low"         // 低优先级
+}
+```
+
+### 3. 任务生命周期
+```javascript
+// 典型的任务流转
+pending → in_progress → completed
+```
+
+## 任务管理最佳实践
+
+### 1. 任务创建指导
+```javascript
+// 建议的任务创建原则
+{
+  content: "具体、可操作的任务描述",
+  status: "pending",
+  priority: "根据紧急性和重要性确定",
+  id: "唯一标识符"
+}
+```
+
+### 2. 状态更新规则
+- **及时更新**: 开始工作时立即标记为in_progress
+- **完成确认**: 任务完成后立即标记为completed
+- **一次一个**: 建议同时只有一个任务处于in_progress状态
+
+### 3. 优先级管理
+- **high**: 紧急且重要的任务
+- **medium**: 重要但不紧急的任务
+- **low**: 既不紧急也不重要的任务
+
+## 使用场景示例
+
+### 1. 项目规划
+```javascript
+// 复杂项目的任务分解
+todos: [
+  {
+    content: "分析项目需求和技术栈",
+    status: "completed",
+    priority: "high",
+    id: "task-1"
+  },
+  {
+    content: "设计系统架构和数据模型",
+    status: "in_progress", 
+    priority: "high",
+    id: "task-2"
+  },
+  {
+    content: "实现核心功能模块",
+    status: "pending",
+    priority: "high", 
+    id: "task-3"
+  },
+  {
+    content: "编写单元测试",
+    status: "pending",
+    priority: "medium",
+    id: "task-4"
+  }
+]
+```
+
+### 2. Bug修复工作流
+```javascript
+// Bug修复的任务管理
+todos: [
+  {
+    content: "重现并确认bug",
+    status: "completed",
+    priority: "high",
+    id: "bug-1"
+  },
+  {
+    content: "分析bug根本原因",
+    status: "in_progress",
+    priority: "high", 
+    id: "bug-2"
+  },
+  {
+    content: "实现修复方案",
+    status: "pending",
+    priority: "high",
+    id: "bug-3"
+  },
+  {
+    content: "编写回归测试",
+    status: "pending",
+    priority: "medium",
+    id: "bug-4"
+  }
+]
+```
+
+## 任务列表格式化
+
+### 1. 显示格式
+```
+Current Todo List:
+
+High Priority:
+✓ [completed] 分析项目需求和技术栈
+⏳ [in_progress] 设计系统架构和数据模型  
+⭕ [pending] 实现核心功能模块
+
+Medium Priority:
+⭕ [pending] 编写单元测试
+⭕ [pending] 更新项目文档
+
+Low Priority:
+⭕ [pending] 优化性能
+```
+
+### 2. 进度统计
+```
+Progress Summary:
+- Total tasks: 6
+- Completed: 1 (17%)
+- In progress: 1 (17%)
+- Pending: 4 (66%)
+```
+
+## 工具协作模式
+
+### 1. 与其他工具的集成
+- **任务启动**: 使用TodoRead查看待办事项
+- **工作执行**: 使用相关工具执行任务
+- **状态更新**: 使用TodoWrite更新任务状态
+- **进度跟踪**: 定期使用TodoRead检查进度
+
+### 2. 工作流程示例
+```javascript
+// 典型的工作流程
+1. TodoRead() → 查看当前任务
+2. TodoWrite() → 标记任务为in_progress
+3. [执行相关工具] → 完成实际工作
+4. TodoWrite() → 标记任务为completed
+5. TodoRead() → 确认更新并查看下一个任务
+```
+
+## 性能特征
+- **并发安全**: 两个工具都是isConcurrencySafe() = true
+- **读写分离**: TodoRead只读，TodoWrite可写
+- **会话持久化**: 任务状态在会话中持续保存
+- **实时同步**: 状态更新立即反映
+
+## 错误处理
+
+### 1. 数据验证错误
+- 任务内容为空
+- 无效的状态值
+- 无效的优先级
+- 缺失的任务ID
+
+### 2. 状态冲突
+- 重复的任务ID
+- 无效的状态转换
+- 数据一致性问题
+
+### 3. 系统错误
+- 任务存储失败
+- 数据读取错误
+- 序列化问题
+
+## 架构地位
+Todo管理工具是Claude Code项目管理和工作流程支持的核心组件，提供了结构化的任务管理能力，帮助用户和AI共同跟踪复杂开发工作的进展。它体现了Claude Code对专业开发工作流程的深度理解和支持。
+
+## 技术特点
+1. **结构化**: 标准化的任务数据结构
+2. **状态管理**: 完整的任务生命周期管理
+3. **优先级**: 三级优先级系统
+4. **持久化**: 会话级别的状态持久化
+5. **协作友好**: 与其他工具的良好集成
+
+## 使用指导原则
+
+### 1. 何时使用Todo工具
+- 复杂的多步骤任务
+- 需要跟踪进度的项目
+- 用户明确要求使用待办列表
+- 多个相关任务需要协调
+
+### 2. 何时不使用
+- 单一简单任务
+- 纯信息查询
+- 对话性交流
+- 琐碎操作
+
+### 3. 最佳实践
+- 频繁使用TodoRead检查状态
+- 及时更新任务进度
+- 同时只处理一个in_progress任务
+- 保持任务描述具体和可操作

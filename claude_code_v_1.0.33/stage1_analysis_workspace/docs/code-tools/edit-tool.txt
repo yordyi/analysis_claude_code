@@ -1,0 +1,256 @@
+# Edit Tool (oU)
+
+## 基本信息
+- **工具名称**: Edit
+- **内部常量**: oU = "Edit"
+- **文件位置**: improved-claude-code-5.mjs:14169, 42526
+- **工具类型**: 文件编辑工具
+
+## 代码运行时机
+- **触发条件**: 用户需要修改文件内容时
+- **调用场景**: 
+  - 代码修改和重构
+  - 配置文件更新
+  - 文档内容编辑
+  - Bug修复
+  - 功能添加和增强
+- **执行路径**: 用户请求 → 文件读取验证 → 内容匹配 → Edit工具调用 → 字符串替换 → 文件写入
+
+## 系统运转时机
+- **生命周期**: 操作级别，每次编辑操作独立执行
+- **优先级**: 高优先级，核心编辑功能
+- **持续性**: 单次执行，结果持久化到文件系统
+
+## 作用时机
+- **读取验证**: 在编辑前必须已读取过文件内容
+- **内容匹配**: 精确匹配old_string在文件中的位置
+- **权限检查**: 验证文件写入权限
+- **原子操作**: 确保编辑操作的原子性
+
+## 作用目的
+1. **精确编辑**: 提供精确的字符串替换能力
+2. **安全修改**: 通过精确匹配防止误修改
+3. **版本控制**: 支持可追踪的文件修改
+4. **批量替换**: 支持全文替换模式
+5. **错误防护**: 通过严格验证防止编辑错误
+
+## 具体作用
+- **字符串匹配**: 在文件中精确定位old_string
+- **内容替换**: 将old_string替换为new_string
+- **唯一性检查**: 确保old_string在文件中唯一或使用replace_all
+- **行号保持**: 保持文件的行号结构
+- **编码处理**: 正确处理文件编码
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 14169)
+NE2 = "Performs exact string replacements in files.\n\nUsage:\n- You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file.\n- When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: spaces + line number + tab. Everything after that tab is the actual file content to match. Never include any part of the line number prefix in the old_string or new_string.\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.\n- The edit will FAIL if `old_string` is not unique in the file. Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `old_string`.\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance."
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  file_path: n.string().describe("The absolute path to the file to modify"),
+  old_string: n.string().describe("The text to replace"),
+  new_string: n.string().describe("The text to replace it with (must be different from old_string)"),
+  replace_all: n.boolean().default(false).describe("Replace all occurences of old_string (default false)")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具对象定义 (Line 42526)
+{
+  name: oU,
+  async description() {
+    return NE2
+  },
+  inputSchema: tI5,
+  userFacingName() {
+    return "Edit"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !1,  // 非并发安全
+  isReadOnly: () => !1,         // 非只读操作
+  
+  async validateInput(A, B) {
+    // 验证必须先读取文件
+    if (!B.hasReadFile(A.file_path)) {
+      throw new Error("You must use the Read tool to read the file before editing it")
+    }
+    
+    // 验证old_string和new_string不同
+    if (A.old_string === A.new_string) {
+      throw new Error("old_string and new_string must be different")
+    }
+    
+    return A
+  }
+}
+```
+
+## 核心安全机制
+
+### 1. 读取前置要求
+```javascript
+// 必须先读取文件才能编辑
+if (!B.hasReadFile(A.file_path)) {
+  throw new Error("You must use the Read tool to read the file before editing it")
+}
+```
+
+### 2. 唯一性验证
+```javascript
+// 确保old_string在文件中唯一或使用replace_all
+if (!A.replace_all && countOccurrences(fileContent, A.old_string) > 1) {
+  throw new Error("old_string is not unique in the file. Use replace_all or provide more context")
+}
+```
+
+### 3. 内容验证
+```javascript
+// 验证old_string存在于文件中
+if (!fileContent.includes(A.old_string)) {
+  throw new Error("old_string not found in file")
+}
+```
+
+## 编辑模式
+
+### 1. 单次替换模式 (replace_all: false)
+- **要求**: old_string在文件中必须唯一
+- **用途**: 精确的单点修改
+- **安全性**: 防止意外的多处修改
+
+### 2. 全文替换模式 (replace_all: true)
+- **功能**: 替换文件中所有old_string出现
+- **用途**: 变量重命名、批量修改
+- **效率**: 一次操作完成所有替换
+
+## 行号处理规范
+
+### 1. 行号前缀格式
+```
+spaces + line number + tab + actual content
+```
+
+### 2. 内容提取规则
+- 从Read工具输出中提取内容时忽略行号前缀
+- 只匹配tab之后的实际文件内容
+- 保持原始的缩进和空白字符
+
+### 3. 缩进保持
+```javascript
+// 正确的缩进提取示例
+"     42→    function example() {"
+// 应该提取: "    function example() {"
+// 而不是: "     42→    function example() {"
+```
+
+## 权限和验证
+
+### 1. 文件权限检查
+```javascript
+async checkPermissions(A, B) {
+  return await AX5(A.file_path, B)  // 使用通用权限检查
+}
+```
+
+### 2. 路径验证
+- 绝对路径要求
+- 文件存在性检查
+- 写入权限验证
+
+### 3. 内容验证
+- old_string存在性验证
+- 字符串差异验证
+- 编码兼容性检查
+
+## 错误处理机制
+
+### 1. 前置条件错误
+- 未读取文件错误
+- 相同字符串错误
+- 路径无效错误
+
+### 2. 匹配错误
+- old_string未找到
+- 多重匹配但未设置replace_all
+- 编码不匹配
+
+### 3. 系统错误
+- 文件权限错误
+- 磁盘空间不足
+- I/O错误
+
+## 使用最佳实践
+
+### 1. 编辑前准备
+```javascript
+// 标准编辑流程
+1. 使用Read工具读取文件
+2. 分析文件内容结构
+3. 确定精确的old_string
+4. 使用Edit工具进行修改
+```
+
+### 2. 字符串选择
+- 选择足够特定的old_string确保唯一性
+- 包含周围上下文增加匹配精度
+- 避免包含行号前缀
+
+### 3. 批量操作
+- 使用replace_all进行变量重命名
+- 考虑使用MultiEdit进行多点修改
+- 避免过于宽泛的替换模式
+
+## 工具协作
+
+### 1. 与Read工具的依赖
+```javascript
+// 强制依赖关系
+Edit工具 → 必须先使用Read工具
+```
+
+### 2. 与MultiEdit工具的关系
+- MultiEdit内部使用Edit工具
+- 适用于多处修改场景
+- 提供事务性编辑保证
+
+### 3. 与Write工具的区别
+- Edit: 修改现有文件
+- Write: 创建新文件或完全重写
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = false (文件修改操作)
+- **读写操作**: isReadOnly() = false
+- **原子性**: 单个编辑操作的原子性保证
+- **效率**: 基于字符串操作的高效实现
+
+## 安全设计原则
+
+### 1. 防止误修改
+- 精确字符串匹配
+- 唯一性验证
+- 读取前置要求
+
+### 2. 操作可追踪
+- 明确的old_string/new_string记录
+- 文件修改历史
+- 错误信息详细记录
+
+### 3. 权限控制
+- 文件级别权限检查
+- 用户级别访问控制
+- 路径安全验证
+
+## 架构地位
+Edit工具是Claude Code文件编辑功能的核心，为代码修改、配置更新等关键操作提供了安全、精确的编辑能力。它的设计体现了在功能性和安全性之间的精心平衡，是开发工作流中不可或缺的工具。
+
+## 技术特点
+1. **精确性**: 基于精确字符串匹配的编辑机制
+2. **安全性**: 多层验证和错误防护
+3. **可靠性**: 原子性操作和一致性保证
+4. **易用性**: 清晰的错误信息和使用指导
+5. **集成性**: 与其他工具的良好协作机制

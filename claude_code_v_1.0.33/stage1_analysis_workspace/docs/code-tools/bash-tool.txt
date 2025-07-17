@@ -1,0 +1,241 @@
+# Bash Tool (ZK)
+
+## 基本信息
+- **工具名称**: Bash
+- **内部常量**: ZK = "Bash"
+- **文件位置**: improved-claude-code-5.mjs:26679, 40875
+- **工具类型**: 命令行执行工具
+
+## 代码运行时机
+- **触发条件**: 用户需要执行shell命令时
+- **调用场景**: 
+  - 构建和编译项目
+  - 运行测试和脚本
+  - Git版本控制操作
+  - 文件系统操作
+  - 软件包管理
+- **执行路径**: 用户请求 → 命令安全检查 → 权限验证 → Bash工具调用 → 系统执行
+
+## 系统运转时机
+- **生命周期**: 命令级别，每个命令独立执行
+- **优先级**: 高优先级，核心功能工具
+- **持续性**: 持久化shell会话，命令间状态保持
+
+## 作用时机
+- **安全预检**: 在执行前进行命令前缀分析和注入检测
+- **权限验证**: 检查用户对特定命令的执行权限
+- **环境准备**: 设置执行环境和工作目录
+- **执行监控**: 超时控制和输出限制
+
+## 作用目的
+1. **命令执行**: 提供安全的shell命令执行能力
+2. **开发支持**: 支持常见的开发工作流程
+3. **安全保障**: 通过多层检查防止恶意命令执行
+4. **用户体验**: 提供友好的命令行交互体验
+5. **系统集成**: 与其他工具和服务无缝集成
+
+## 具体作用
+- **命令解析**: 分析命令结构和参数
+- **安全检查**: 检测命令注入和恶意模式
+- **权限管理**: 根据用户权限控制命令执行
+- **环境隔离**: 在安全环境中执行命令
+- **结果处理**: 格式化输出并处理错误
+
+## 描述生成函数
+```javascript
+// xa0函数生成工具描述 (Line 26696-26791)
+function xa0(A, B, Q, I, G, Z) {
+  return `Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
+
+Before executing the command, please follow these steps:
+
+1. Directory Verification:
+   - If the command will create new directories or files, first use the ${I} tool to verify the parent directory exists and is the correct location
+   - For example, before running "mkdir foo/bar", first use ${I} to check that "foo" exists and is the intended parent directory
+
+2. Command Execution:
+   - Always quote file paths that contain spaces with double quotes (e.g., cd "path with spaces/file.txt")
+   - Examples of proper quoting:
+     - cd "/Users/name/My Documents" (correct)
+     - cd /Users/name/My Documents (incorrect - will fail)
+     - python "/path/with spaces/script.py" (correct)
+     - python /path/with spaces/script.py (incorrect - will fail)
+   - After ensuring proper quoting, execute the command.
+   - Capture the output of the command.
+
+Usage notes:
+  - The command argument is required.
+  - You can specify an optional timeout in milliseconds (up to ${CJ1()}ms / ${CJ1()/60000} minutes). If not specified, commands will timeout after ${Em()}ms (${Em()/60000} minutes).
+  - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.
+  - If the output exceeds ${KJ1()} characters, output will be truncated before being returned to you.
+  - VERY IMPORTANT: You MUST avoid using search commands like \`find\` and \`grep\`. Instead use ${XJ1}, ${FJ1}, or ${cX} to search. You MUST avoid read tools like \`cat\`, \`head\`, \`tail\`, and \`ls\`, and use ${TD} and ${VJ1} to read files.
+  - If you _still_ need to run \`grep\`, STOP. ALWAYS USE ripgrep at \`rg\` first, which all ${m0} users have pre-installed.
+  - When issuing multiple commands, use the ';' or '&&' operator to separate them. DO NOT use newlines (newlines are ok in quoted strings).
+  - Try to maintain your current working directory throughout the session by using absolute paths and avoiding usage of \`cd\`. You may use \`cd\` if the User explicitly requests it.`
+}
+```
+
+## 相关上下文代码
+```javascript
+// 工具对象定义 (Line 40875)
+{
+  name: ZK,
+  async description() {
+    return xa0(A, B, Q, I, G, Z)  // 动态生成描述
+  },
+  inputSchema: DH5,  // 参数架构
+  userFacingName() {
+    return "Bash"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !1,  // 非并发安全
+  isReadOnly: () => !1,         // 非只读操作
+  
+  async checkPermissions(A, B) {
+    // 权限检查逻辑
+    let Q = await uJ1(A.command, B.abortController.signal, B.isNonInteractiveSession);
+    if (Q.isError) return {
+      isAllowed: !1,
+      denialReason: `Command not allowed: ${Q.prefix}`
+    };
+    
+    let I = await V2(Q.prefix, B.userId);
+    return I.isAllowed ? {
+      isAllowed: !0
+    } : {
+      isAllowed: !1, 
+      denialReason: I.denialReason
+    }
+  }
+}
+```
+
+## 核心安全机制
+
+### 1. 命令前缀检测 (uJ1函数)
+```javascript
+// 使用LLM分析命令前缀和注入检测
+async function uJ1(A, B, Q) {
+  let I = await KC(JH1, {
+    systemPrompt: ["Your task is to process Bash commands..."],
+    userPrompt: `Command: ${A}`,
+    signal: B,
+    enablePromptCaching: !1,
+    isNonInteractiveSession: Q,
+    promptCategory: "command_injection"
+  });
+  
+  // 检测命令注入
+  if (G.startsWith(bZ)) return {
+    prefix: G,
+    isError: !0
+  };
+  
+  return {
+    prefix: G,
+    isError: !1
+  }
+}
+```
+
+### 2. 权限验证系统
+- **前缀匹配**: 根据命令前缀检查用户权限
+- **白名单机制**: 允许的命令前缀列表
+- **动态权限**: 基于用户角色的动态权限控制
+
+### 3. 沙箱模式支持
+```javascript
+// 沙箱执行检测
+if (A.sandbox === !0) {
+  // 只读操作的沙箱执行
+  return await executeInSandbox(A.command);
+}
+```
+
+## 参数架构
+```javascript
+DH5 = n.strictObject({
+  command: n.string().describe("The command to execute"),
+  description: n.string().optional().describe("Clear, concise description of what this command does in 5-10 words"),
+  timeout: n.number().optional().max(600000).describe("Optional timeout in milliseconds (max 600000)")
+})
+```
+
+## Git工作流特殊处理
+
+### 提交流程自动化
+```javascript
+// Git提交的特殊指导
+# Committing changes with git
+
+When the user asks you to create a new git commit, follow these steps carefully:
+
+1. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following bash commands in parallel, each using the Bash tool:
+  - Run a git status command to see all untracked files.
+  - Run a git diff command to see both staged and unstaged changes that will be committed.
+  - Run a git log command to see recent commit messages, so that you can follow this repository's commit message style.
+
+2. Analyze all staged changes (both previously staged and newly added) and draft a commit message:
+  - Summarize the nature of the changes (eg. new feature, enhancement to an existing feature, bug fix, refactoring, test, docs, etc.). Ensure the message accurately reflects the changes and their purpose (i.e. "add" means a wholly new feature, "update" means an enhancement to an existing feature, "fix" means a bug fix, etc.).
+  - Check for any sensitive information that shouldn't be committed
+  - Draft a concise (1-2 sentences) commit message that focuses on the "why" rather than the "what"
+  - Ensure it accurately reflects the changes and their purpose
+
+3. You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. ALWAYS run the following commands in parallel:
+   - Add relevant untracked files to the staging area.
+   - Create the commit with a message
+   - Run git status to make sure the commit succeeded.
+
+4. If the commit fails due to pre-commit hook changes, retry the commit ONCE to include these automated changes. If it fails again, it usually means a pre-commit hook is preventing the commit. If the commit succeeds but you notice that files were modified by the pre-commit hook, you MUST amend your commit to include them.
+```
+
+## 安全约束和最佳实践
+
+### 禁止的命令模式
+1. **find命令**: 强制使用Glob工具替代
+2. **grep命令**: 强制使用Grep工具或ripgrep
+3. **cat/head/tail**: 强制使用Read工具
+4. **ls命令**: 强制使用LS工具
+
+### 路径处理规范
+1. **引号要求**: 包含空格的路径必须使用双引号
+2. **绝对路径**: 建议使用绝对路径避免cd使用
+3. **目录验证**: 创建文件前先验证父目录存在
+
+### 执行控制
+1. **超时限制**: 默认2分钟，最大10分钟
+2. **输出限制**: 超过30000字符自动截断
+3. **命令链接**: 使用';'或'&&'连接多个命令
+
+## 错误处理和安全措施
+
+### 1. 命令注入防护
+- LLM驱动的命令分析
+- 特殊字符和模式检测
+- 命令链和重定向检测
+
+### 2. 权限边界
+- 基于前缀的权限控制
+- 用户角色权限映射
+- 动态权限评估
+
+### 3. 执行监控
+- 实时输出监控
+- 超时自动终止
+- 资源使用限制
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = false (shell状态共享)
+- **读写操作**: isReadOnly() = false
+- **持久会话**: 维护shell状态在命令间
+- **流式输出**: 支持实时输出显示
+
+## 架构地位
+Bash工具是Claude Code的核心执行引擎，承担了几乎所有与系统交互的任务。它的设计体现了Claude Code在功能性、安全性和易用性之间的精细平衡，是整个工具生态系统的基石。
+
+## 技术特点
+1. **智能安全**: LLM驱动的命令安全分析
+2. **权限精细**: 基于前缀的细粒度权限控制
+3. **工具集成**: 与专用工具的智能协作
+4. **用户引导**: 详细的使用指导和最佳实践
+5. **状态管理**: 持久化shell会话状态

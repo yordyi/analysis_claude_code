@@ -1,0 +1,377 @@
+# MultiEdit Tool (OE2)
+
+## 基本信息
+- **工具名称**: MultiEdit
+- **内部常量**: OE2 = "MultiEdit"
+- **文件位置**: improved-claude-code-5.mjs:42729, 42881
+- **工具类型**: 多点文件编辑工具
+
+## 代码运行时机
+- **触发条件**: 用户需要在单个文件中进行多处修改时
+- **调用场景**: 
+  - 重构代码时的多点修改
+  - 批量替换变量名或函数名
+  - 同时修改多个相关代码段
+  - 复杂的代码结构调整
+  - 一次性修复多个相同问题
+- **执行路径**: 用户请求 → 编辑计划验证 → MultiEdit工具调用 → 顺序执行编辑 → 事务性提交
+
+## 系统运转时机
+- **生命周期**: 操作级别，单次事务性编辑操作
+- **优先级**: 高优先级，高效编辑工具
+- **持续性**: 单次执行，所有编辑原子性完成
+
+## 作用时机
+- **编辑规划**: 验证所有编辑操作的可行性
+- **顺序执行**: 按顺序应用每个编辑操作
+- **冲突检测**: 检测编辑操作间的潜在冲突
+- **事务提交**: 确保所有编辑要么全部成功要么全部失败
+
+## 作用目的
+1. **批量编辑**: 在单个文件中高效进行多处修改
+2. **原子性**: 确保多个编辑操作的原子性
+3. **效率提升**: 比多次单独Edit操作更高效
+4. **一致性**: 保证相关修改的一致性
+5. **错误防护**: 通过事务性操作防止部分修改导致的文件损坏
+
+## 具体作用
+- **编辑序列**: 管理多个编辑操作的执行序列
+- **依赖处理**: 处理编辑操作间的依赖关系
+- **冲突解决**: 检测和解决编辑冲突
+- **回滚机制**: 在失败时回滚所有修改
+- **进度跟踪**: 跟踪编辑操作的执行进度
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 42729)
+TE2 = `This is a tool for making multiple edits to a single file in one operation. It is built on top of the ${oU} tool and allows you to perform multiple find-and-replace operations efficiently. Prefer this tool over the ${oU} tool when you need to make multiple edits to the same file.
+
+Before using this tool:
+
+1. Use the Read tool to understand the file's contents and context
+2. Verify the directory path is correct
+
+To make multiple file edits, provide the following:
+1. file_path: The absolute path to the file to modify (must be absolute, not relative)
+2. edits: An array of edit operations to perform, where each edit contains:
+   - old_string: The text to replace (must match the file contents exactly, including all whitespace and indentation)
+   - new_string: The edited text to replace the old_string
+   - replace_all: Replace all occurences of old_string. This parameter is optional and defaults to false.
+
+IMPORTANT:
+- All edits are applied in sequence, in the order they are provided
+- Each edit operates on the result of the previous edit
+- All edits must be valid for the operation to succeed - if any edit fails, none will be applied
+- This tool is ideal when you need to make several changes to different parts of the same file
+- For Jupyter notebooks (.ipynb files), use the NotebookEdit instead
+
+CRITICAL REQUIREMENTS:
+1. All edits follow the same requirements as the single Edit tool
+2. The edits are atomic - either all succeed or none are applied
+3. Plan your edits carefully to avoid conflicts between sequential operations
+
+WARNING:
+- The tool will fail if edits.old_string doesn't match the file contents exactly (including whitespace)
+- The tool will fail if edits.old_string and edits.new_string are the same
+- Since edits are applied in sequence, ensure that earlier edits don't affect the text that later edits are trying to find
+
+When making edits:
+- Ensure all edits result in idiomatic, correct code
+- Do not leave the code in a broken state
+- Always use absolute file paths (starting with /)
+- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.
+- Use replace_all for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.
+
+If you want to create a new file, use:
+- A new file path, including dir name if needed
+- First edit: empty old_string and the new file's contents as new_string
+- Subsequent edits: normal edit operations on the created content`
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  file_path: n.string().describe("The absolute path to the file to modify"),
+  edits: n.array(
+    n.strictObject({
+      old_string: n.string().describe("The text to replace"),
+      new_string: n.string().describe("The text to replace it with"),
+      replace_all: n.boolean().default(false).describe("Replace all occurences of old_string (default false).")
+    })
+  ).min(1).describe("Array of edit operations to perform sequentially on the file")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+OE2 = "MultiEdit"  // Line 42729
+
+// 工具对象定义 (Line 42881)
+{
+  name: OE2,
+  async description() {
+    return TE2
+  },
+  inputSchema: SI5,
+  userFacingName() {
+    return "MultiEdit"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !1,  // 非并发安全
+  isReadOnly: () => !1,         // 非只读操作
+  
+  async validateInput(A, B) {
+    // 验证必须先读取文件
+    if (!B.hasReadFile(A.file_path)) {
+      throw new Error("You must use the Read tool to read the file before editing it")
+    }
+    
+    // 验证每个编辑操作
+    for (let edit of A.edits) {
+      if (edit.old_string === edit.new_string) {
+        throw new Error("old_string and new_string must be different in each edit")
+      }
+    }
+    
+    return A
+  }
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法
+async * call(A, B) {
+  let Q = await V2(A.file_path, B.userId);
+  if (!Q.isAllowed) {
+    yield {
+      type: "error",
+      error: Q.denialReason
+    };
+    return
+  }
+  
+  // 事务性执行所有编辑
+  try {
+    await hY5(A.file_path, A.edits, B);
+    yield {
+      type: "text",
+      text: `Successfully applied ${A.edits.length} edits to ${A.file_path}`
+    }
+  } catch (error) {
+    yield {
+      type: "error", 
+      error: `MultiEdit failed: ${error.message}. No changes were applied.`
+    }
+  }
+}
+```
+
+## 编辑执行机制
+
+### 1. 顺序执行原则
+```javascript
+// 编辑按顺序应用
+"All edits are applied in sequence, in the order they are provided"
+"Each edit operates on the result of the previous edit"
+```
+
+### 2. 原子性保证
+```javascript
+// 事务性执行
+"All edits must be valid for the operation to succeed - if any edit fails, none will be applied"
+"The edits are atomic - either all succeed or none are applied"
+```
+
+### 3. 依赖处理
+```javascript
+// 编辑间依赖
+"Since edits are applied in sequence, ensure that earlier edits don't affect the text that later edits are trying to find"
+```
+
+## 编辑规划策略
+
+### 1. 独立编辑
+```javascript
+// 示例：独立的多处修改
+edits: [
+  {
+    old_string: "function oldName1() {",
+    new_string: "function newName1() {"
+  },
+  {
+    old_string: "function oldName2() {", 
+    new_string: "function newName2() {"
+  }
+]
+```
+
+### 2. 依赖性编辑
+```javascript
+// 示例：有依赖关系的编辑
+edits: [
+  {
+    old_string: "const API_URL = 'http://old-api.com'",
+    new_string: "const API_URL = 'https://new-api.com'"
+  },
+  {
+    old_string: "// TODO: Update API URL",
+    new_string: "// API URL updated to HTTPS"
+  }
+]
+```
+
+### 3. 全文替换
+```javascript
+// 示例：变量重命名
+edits: [
+  {
+    old_string: "oldVariableName",
+    new_string: "newVariableName", 
+    replace_all: true
+  }
+]
+```
+
+## 新文件创建模式
+
+### 1. 特殊用法
+```javascript
+// 创建新文件的特殊语法
+edits: [
+  {
+    old_string: "",  // 空字符串
+    new_string: "// New file content\nfunction example() {\n  return 'Hello';\n}"
+  },
+  {
+    old_string: "example",
+    new_string: "greeting"
+  }
+]
+```
+
+## 错误处理和验证
+
+### 1. 前置验证
+```javascript
+// 必要的前置条件
+1. 必须先使用Read工具读取文件
+2. 所有编辑的old_string和new_string必须不同
+3. 文件路径必须是绝对路径
+```
+
+### 2. 执行时验证
+```javascript
+// 执行过程中的验证
+1. 每个old_string必须在当前文件状态中存在
+2. 如果不是replace_all模式，old_string必须唯一
+3. 编辑操作不能导致文件损坏
+```
+
+### 3. 失败回滚
+```javascript
+// 失败时的处理
+"if any edit fails, none will be applied"
+// 确保文件保持一致状态
+```
+
+## 与Edit工具的关系
+
+| 方面 | MultiEdit | Edit |
+|------|----------|------|
+| 编辑数量 | 多个编辑操作 | 单个编辑操作 |
+| 原子性 | 事务性原子操作 | 单独原子操作 |
+| 效率 | 批量操作高效 | 单次操作简单 |
+| 复杂度 | 需要规划编辑顺序 | 操作简单直接 |
+| 适用场景 | 复杂重构 | 简单修改 |
+
+## 使用场景
+
+### 1. 代码重构
+```javascript
+// 重构函数名和相关调用
+edits: [
+  {
+    old_string: "function calculateTotal(items) {",
+    new_string: "function computeTotalPrice(items) {"
+  },
+  {
+    old_string: "calculateTotal(cart.items)",
+    new_string: "computeTotalPrice(cart.items)"
+  },
+  {
+    old_string: "// Calculate total price",
+    new_string: "// Compute total price using new algorithm"
+  }
+]
+```
+
+### 2. API更新
+```javascript
+// 更新API调用和相关配置
+edits: [
+  {
+    old_string: "const API_VERSION = 'v1'",
+    new_string: "const API_VERSION = 'v2'"
+  },
+  {
+    old_string: "/api/v1/users",
+    new_string: "/api/v2/users"
+  },
+  {
+    old_string: "headers: { 'Accept': 'application/json' }",
+    new_string: "headers: { 'Accept': 'application/json', 'API-Version': 'v2' }"
+  }
+]
+```
+
+### 3. 配置更新
+```javascript
+// 批量更新配置项
+edits: [
+  {
+    old_string: "development",
+    new_string: "production",
+    replace_all: true
+  },
+  {
+    old_string: "debug: true",
+    new_string: "debug: false"
+  }
+]
+```
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = false (文件修改操作)
+- **读写操作**: isReadOnly() = false
+- **事务性**: 原子性编辑保证
+- **高效**: 比多次Edit调用更高效
+
+## 最佳实践
+
+### 1. 编辑规划
+- 仔细规划编辑顺序避免冲突
+- 从文件底部向顶部编辑避免行号变化
+- 使用具体的old_string确保唯一性
+
+### 2. 错误预防
+- 先用Read工具完全理解文件内容
+- 验证每个编辑操作的可行性
+- 考虑编辑间的相互影响
+
+### 3. 代码质量
+- 确保编辑后代码语法正确
+- 保持代码风格一致性
+- 不留下破坏性的中间状态
+
+## 架构地位
+MultiEdit工具是Claude Code高级编辑功能的体现，它在Edit工具基础上提供了事务性的批量编辑能力，特别适合复杂的代码重构和系统性修改任务。它体现了从简单工具向智能编辑系统的进化。
+
+## 技术特点
+1. **事务性**: 保证多个编辑操作的原子性
+2. **顺序性**: 智能的编辑顺序管理
+3. **高效性**: 批量操作比多次单独操作更高效
+4. **安全性**: 完善的验证和回滚机制
+5. **灵活性**: 支持复杂的编辑场景和新文件创建

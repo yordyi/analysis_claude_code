@@ -1,0 +1,274 @@
+# Write Tool (rE2)
+
+## 基本信息
+- **工具名称**: Write
+- **内部常量**: rE2 = "Write"
+- **文件位置**: improved-claude-code-5.mjs:44506, 44668-44698
+- **工具类型**: 文件创建和重写工具
+
+## 代码运行时机
+- **触发条件**: 用户需要创建新文件或完全重写现有文件时
+- **调用场景**: 
+  - 创建新的源代码文件
+  - 生成配置文件
+  - 创建文档和README
+  - 重写损坏的文件
+  - 生成模板文件
+- **执行路径**: 用户请求 → 路径验证 → 权限检查 → Write工具调用 → 文件写入
+
+## 系统运转时机
+- **生命周期**: 操作级别，每次写入操作独立执行
+- **优先级**: 高优先级，文件创建核心功能
+- **持续性**: 单次执行，结果持久化到文件系统
+
+## 作用时机
+- **文件检查**: 对于现有文件，必须先读取过内容
+- **路径创建**: 自动创建必要的父目录
+- **权限验证**: 检查文件写入权限
+- **内容写入**: 完全覆盖文件内容
+
+## 作用目的
+1. **文件创建**: 创建全新的文件
+2. **内容重写**: 完全替换现有文件内容
+3. **原子写入**: 确保写入操作的原子性
+4. **目录创建**: 自动创建必要的目录结构
+5. **编码处理**: 正确处理文件编码和格式
+
+## 具体作用
+- **路径解析**: 处理绝对路径和相对路径
+- **目录创建**: 创建不存在的父目录
+- **内容写入**: 将content写入到指定文件
+- **权限设置**: 设置适当的文件权限
+- **编码转换**: 处理不同的文件编码
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 44506)
+oE2 = "Writes a file to the local filesystem.\n\nUsage:\n- This tool will overwrite the existing file if there is one at the provided path.\n- If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked."
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  file_path: n.string().describe("The absolute path to the file to write (must be absolute, not relative)"),
+  content: n.string().describe("The content to write to the file")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具对象定义 (Line 44668)
+{
+  name: rE2,
+  async description() {
+    return oE2
+  },
+  inputSchema: NI5,
+  userFacingName() {
+    return "Write"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !1,  // 非并发安全
+  isReadOnly: () => !1,         // 非只读操作
+  
+  async validateInput(A, B) {
+    // 对于现有文件，必须先读取
+    if (await fileExists(A.file_path) && !B.hasReadFile(A.file_path)) {
+      throw new Error("If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.")
+    }
+    
+    return A
+  }
+}
+```
+
+## 核心安全机制
+
+### 1. 现有文件保护
+```javascript
+// 必须先读取现有文件
+if (await fileExists(A.file_path) && !B.hasReadFile(A.file_path)) {
+  throw new Error("If this is an existing file, you MUST use the Read tool first to read the file's contents.")
+}
+```
+
+### 2. 路径验证
+```javascript
+// 绝对路径要求
+if (!A.file_path.startsWith('/')) {
+  throw new Error('File path must be absolute, not relative')
+}
+```
+
+### 3. 权限检查
+```javascript
+async checkPermissions(A, B) {
+  return await AX5(A.file_path, B)  // 使用通用权限检查
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法 (Line 44698)
+async * call(A, B) {
+  let Q = await V2(A.file_path, B.userId);
+  if (!Q.isAllowed) {
+    yield {
+      type: "error",
+      error: Q.denialReason
+    };
+    return
+  }
+  
+  await fY5(A.file_path, A.content, B);
+  yield {
+    type: "text",
+    text: `File written successfully to ${A.file_path}`
+  }
+}
+```
+
+## 文件操作策略
+
+### 1. 新文件创建
+- **自动目录创建**: 如果父目录不存在，自动创建
+- **权限设置**: 设置适当的文件权限
+- **编码处理**: 使用UTF-8编码写入
+
+### 2. 现有文件覆盖
+- **读取验证**: 必须先使用Read工具读取现有内容
+- **完全覆盖**: 完全替换文件内容，不保留原有内容
+- **备份策略**: 可能的文件备份机制
+
+### 3. 特殊文件处理
+- **文档文件**: 禁止主动创建.md或README文件
+- **配置文件**: 特殊的配置文件格式处理
+- **可执行文件**: 自动设置执行权限
+
+## 使用策略指导
+
+### 1. 优先级原则
+```
+"ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required."
+```
+
+### 2. 文档创建限制
+```
+"NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User."
+```
+
+### 3. 内容规范
+```
+"Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked."
+```
+
+## 目录管理
+
+### 1. 自动目录创建
+```javascript
+// 创建父目录
+async function ensureDirectoryExists(filePath) {
+  const directory = path.dirname(filePath);
+  await fs.mkdir(directory, { recursive: true });
+}
+```
+
+### 2. 路径处理
+- 绝对路径要求
+- 路径标准化
+- 特殊字符处理
+
+### 3. 权限继承
+- 从父目录继承权限
+- 用户权限映射
+- 系统默认权限
+
+## 与其他工具的关系
+
+### 1. 与Edit工具的区别
+| 方面 | Write工具 | Edit工具 |
+|------|----------|----------|
+| 用途 | 创建新文件/完全重写 | 修改现有文件 |
+| 内容处理 | 完全覆盖 | 精确替换 |
+| 读取要求 | 现有文件需先读取 | 必须先读取 |
+| 适用场景 | 新文件创建 | 内容修改 |
+
+### 2. 与MultiEdit工具的协作
+- Write用于创建新文件
+- MultiEdit用于复杂的现有文件编辑
+- 可以组合使用完成复杂操作
+
+### 3. 与Read工具的依赖
+```javascript
+// 对于现有文件的依赖关系
+现有文件 → Read工具(必须) → Write工具
+新文件 → Write工具(直接)
+```
+
+## 错误处理机制
+
+### 1. 前置条件错误
+- 现有文件未读取错误
+- 路径格式错误
+- 权限不足错误
+
+### 2. 文件系统错误
+- 磁盘空间不足
+- 目录创建失败
+- 文件锁定冲突
+
+### 3. 内容错误
+- 编码转换错误
+- 内容格式错误
+- 特殊字符处理错误
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = false (文件写入操作)
+- **读写操作**: isReadOnly() = false
+- **原子性**: 文件写入的原子性保证
+- **缓冲**: 大文件的缓冲写入机制
+
+## 安全设计
+
+### 1. 数据保护
+- 现有文件的读取验证
+- 内容完整性检查
+- 写入确认机制
+
+### 2. 路径安全
+- 绝对路径强制要求
+- 路径遍历防护
+- 敏感目录保护
+
+### 3. 权限控制
+- 文件级别权限检查
+- 用户级别访问控制
+- 目录权限继承
+
+## 最佳实践指导
+
+### 1. 文件创建策略
+- 优先编辑现有文件
+- 仅在必要时创建新文件
+- 避免重复创建同类文件
+
+### 2. 内容管理
+- 保持内容格式一致性
+- 避免不必要的表情符号
+- 遵循项目编码规范
+
+### 3. 路径管理
+- 使用绝对路径
+- 遵循项目目录结构
+- 避免深层嵌套目录
+
+## 架构地位
+Write工具是Claude Code文件创建功能的核心，与Edit工具共同构成了完整的文件操作体系。它的设计强调安全性和谨慎性，防止不必要的文件创建，同时为必要的文件生成提供了可靠的机制。
+
+## 技术特点
+1. **谨慎设计**: 强调编辑优于创建的原则
+2. **安全机制**: 现有文件的读取验证要求
+3. **自动化**: 自动目录创建和权限设置
+4. **一致性**: 与整个工具生态的一致设计
+5. **可靠性**: 原子性写入和错误处理机制

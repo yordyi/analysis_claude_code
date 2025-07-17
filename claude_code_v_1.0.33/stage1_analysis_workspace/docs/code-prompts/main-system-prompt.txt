@@ -1,0 +1,93 @@
+# Main System Prompt (yj function)
+
+## 基本信息
+- **文件位置**: improved-claude-code-5.mjs:26894-27062
+- **函数名**: yj(A, B, Q, I)
+- **提示词类型**: 主要系统身份和行为指导提示词
+
+## 运行时机
+- **触发条件**: 每次交互式会话初始化时
+- **调用场景**: 
+  - 用户启动Claude Code时
+  - 新的对话会话开始时
+  - 系统重置或重新初始化时
+- **执行路径**: 主程序启动 → 系统提示词构建 → yj函数调用
+
+## 系统运转时机
+- **生命周期**: 会话级别，在每个对话会话开始时设置基础行为准则
+- **优先级**: 最高优先级，是所有后续交互的基础框架
+- **持续性**: 整个会话期间持续有效
+
+## 作用时机
+- **即时生效**: 函数调用后立即设置AI的基本行为模式
+- **影响范围**: 影响整个会话中的所有响应和工具使用
+
+## 作用目的
+1. **身份定义**: 确立Claude Code作为软件工程CLI工具的身份
+2. **行为规范**: 设定简洁、直接的交互风格
+3. **安全约束**: 建立防御性安全策略边界
+4. **工具使用指导**: 规范工具调用和任务管理
+5. **用户体验**: 确保命令行界面的简洁性和有效性
+
+## 具体作用
+- **语调控制**: 要求简洁、直接、避免冗余
+- **输出格式**: 限制为4行以内除非用户要求详细说明
+- **表情符号**: 除非明确要求否则禁用
+- **主动性平衡**: 在用户请求和意外行动之间取得平衡
+- **安全限制**: 仅允许防御性安全任务
+- **代码规范**: 强制遵循现有代码约定和最佳实践
+
+## 提示词内容（核心部分）
+```
+You are an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
+
+IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously.
+
+# Tone and style
+You should be concise, direct, and to the point.
+IMPORTANT: Keep your responses short, since they will be displayed on a command line interface. You MUST answer concisely with fewer than 4 lines (not including tool use or code generation), unless user asks for detail.
+
+# Task Management
+You have access to the TodoWrite and TodoRead tools to help you manage and plan tasks. Use these tools VERY frequently.
+```
+
+## 相关上下文代码
+```javascript
+async function yj(A, B, Q, I) {
+  let G = new Set(A.map((D) => D.name)),
+    Z = await xC("claude_code_docs_config", wL6);
+  return [`
+You are an interactive CLI tool that helps users with software engineering tasks...
+${va0}  // 安全策略常量注入
+...
+  `, I ? `
+${await hv5()}
+` : "", Q ? await aJ5(A) : ""]
+}
+```
+
+## 相关变量和依赖
+- **va0**: 防御性安全策略常量
+- **m0**: Claude Code产品名称
+- **ba0**: 官方文档URL
+- **wL6**: 文档配置对象
+- **G**: 可用工具名称集合
+- **I**: 是否包含环境信息标志
+- **Q**: 是否包含任务管理说明标志
+
+## 动态内容注入
+1. **工具列表**: 根据A参数（可用工具数组）动态生成工具使用说明
+2. **安全策略**: 通过va0常量注入防御性安全限制
+3. **文档链接**: 通过ba0和wL6注入官方文档引用
+4. **环境信息**: 根据I标志决定是否包含系统环境描述
+5. **任务管理**: 根据Q标志决定是否包含TodoWrite/TodoRead工具说明
+
+## 架构地位
+这是Claude Code的"宪法"级别提示词，定义了整个系统的核心价值观、行为准则和操作边界。所有其他提示词都在这个框架内运行。
+
+## 技术特点
+1. **模块化设计**: 通过参数控制不同部分的包含
+2. **动态组装**: 根据运行时环境和配置动态构建提示词
+3. **分层架构**: 基础身份 + 行为准则 + 工具指导的分层结构
+4. **安全优先**: 将安全策略作为核心约束条件
+5. **用户体验优化**: 专门针对CLI环境优化的交互模式

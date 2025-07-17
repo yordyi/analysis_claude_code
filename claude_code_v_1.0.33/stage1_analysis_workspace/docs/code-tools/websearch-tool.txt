@@ -1,0 +1,355 @@
+# WebSearch Tool (c_2)
+
+## 基本信息
+- **工具名称**: WebSearch
+- **内部常量**: c_2 = "WebSearch"
+- **文件位置**: improved-claude-code-5.mjs:9992027, 62912-62932
+- **工具类型**: 网络搜索工具
+
+## 代码运行时机
+- **触发条件**: 用户需要搜索最新的网络信息时
+- **调用场景**: 
+  - 获取当前事件和最新数据
+  - 搜索技术文档和解决方案
+  - 查找API文档和示例
+  - 研究最佳实践和行业趋势
+  - 获取超出AI知识截止日期的信息
+- **执行路径**: 用户请求 → 查询构建 → WebSearch工具调用 → 搜索引擎查询 → 结果处理 → 格式化返回
+
+## 系统运转时机
+- **生命周期**: 查询级别，每次搜索查询独立执行
+- **优先级**: 中等优先级，网络依赖工具
+- **持续性**: 单次执行，实时获取搜索结果
+
+## 作用时机
+- **查询优化**: 优化用户搜索查询以获得更好结果
+- **域名过滤**: 根据允许或阻止列表过滤搜索域名
+- **结果获取**: 从搜索引擎获取相关结果
+- **格式化**: 将搜索结果格式化为结构化块
+
+## 作用目的
+1. **信息获取**: 访问超出AI知识截止的最新信息
+2. **实时搜索**: 获取当前事件和实时数据
+3. **知识补充**: 补充AI训练数据中可能缺失的信息
+4. **验证信息**: 验证和更新过时的信息
+5. **研究支持**: 为用户研究和开发提供信息支持
+
+## 具体作用
+- **搜索执行**: 在网络搜索引擎中执行查询
+- **结果过滤**: 根据域名白名单/黑名单过滤结果
+- **信息提取**: 从搜索结果中提取关键信息
+- **格式标准化**: 将结果格式化为标准搜索块
+- **相关性排序**: 按相关性排序搜索结果
+
+## 描述定义
+```javascript
+// 工具描述常量 (Line 9992048)
+l_2 = `
+- Allows Claude to search the web and use the results to inform responses
+- Provides up-to-date information for current events and recent data
+- Returns search result information formatted as search result blocks
+- Use this tool for accessing information beyond Claude's knowledge cutoff
+- Searches are performed automatically within a single API call
+
+Usage notes:
+  - Domain filtering is supported to include or block specific websites
+  - Web search is only available in the US`
+```
+
+## 参数架构
+```javascript
+// 参数模式定义
+inputSchema: n.strictObject({
+  query: n.string().min(2).describe("The search query to use"),
+  allowed_domains: n.array(n.string()).optional().describe("Only include search results from these domains"),
+  blocked_domains: n.array(n.string()).optional().describe("Never include search results from these domains")
+})
+```
+
+## 相关上下文代码
+```javascript
+// 工具名称定义
+c_2 = "WebSearch"  // Line 9992027
+
+// 工具对象定义 (Line 62912)
+{
+  name: c_2,
+  async description() {
+    return l_2
+  },
+  inputSchema: aM5,
+  userFacingName() {
+    return "WebSearch"
+  },
+  isEnabled: () => !0,
+  isConcurrencySafe: () => !0,
+  isReadOnly: () => !0,
+  async validateInput(A, B) {
+    // 验证查询长度
+    if (A.query.length < 2) {
+      throw new Error("Search query must be at least 2 characters long")
+    }
+    return A
+  }
+}
+```
+
+## 核心实现逻辑
+```javascript
+// 主要调用方法 (Line 62932)
+async * call(A, B) {
+  try {
+    // 构建搜索查询
+    let searchQuery = optimizeQuery(A.query);
+    
+    // 执行搜索
+    let searchResults = await performWebSearch(searchQuery, {
+      allowedDomains: A.allowed_domains,
+      blockedDomains: A.blocked_domains,
+      region: 'US'  // 仅美国可用
+    });
+    
+    // 格式化结果
+    let formattedResults = formatSearchResults(searchResults);
+    
+    yield {
+      type: "text",
+      text: formattedResults
+    }
+  } catch (error) {
+    yield {
+      type: "error",
+      error: `Search failed: ${error.message}`
+    }
+  }
+}
+```
+
+## 搜索功能特性
+
+### 1. 地理限制
+```javascript
+// 仅美国地区可用
+"Web search is only available in the US"
+```
+
+### 2. 域名过滤支持
+```javascript
+// 允许域名列表
+allowed_domains: [
+  "stackoverflow.com",
+  "github.com", 
+  "developer.mozilla.org"
+]
+
+// 阻止域名列表  
+blocked_domains: [
+  "example-spam.com",
+  "unreliable-source.net"
+]
+```
+
+### 3. 自动执行
+```javascript
+// 单次API调用完成搜索
+"Searches are performed automatically within a single API call"
+```
+
+## 搜索结果格式
+
+### 1. 搜索结果块
+```javascript
+// 标准格式的搜索结果
+{
+  title: "Result Title",
+  url: "https://example.com/page",
+  snippet: "Brief description of the page content...",
+  domain: "example.com",
+  relevance_score: 0.95
+}
+```
+
+### 2. 结构化输出
+```
+Search Results for: "Claude Code documentation"
+
+1. Claude Code Official Documentation
+   URL: https://docs.anthropic.com/claude-code
+   Description: Comprehensive documentation for Claude Code CLI tool including installation, usage examples, and API reference.
+
+2. Claude Code GitHub Repository  
+   URL: https://github.com/anthropics/claude-code
+   Description: Official GitHub repository with source code, issues, and community discussions.
+
+3. Getting Started with Claude Code
+   URL: https://blog.anthropic.com/claude-code-intro
+   Description: Introduction blog post explaining the key features and use cases of Claude Code.
+```
+
+## 查询优化
+
+### 1. 查询处理
+```javascript
+// 查询优化策略
+function optimizeQuery(query) {
+  // 添加相关关键词
+  // 移除停用词
+  // 优化搜索语法
+  return processedQuery;
+}
+```
+
+### 2. 上下文感知
+- 基于当前对话上下文优化查询
+- 添加相关的技术术语
+- 排除不相关的结果
+
+## 域名过滤机制
+
+### 1. 白名单模式
+```javascript
+// 只搜索指定域名
+allowed_domains: [
+  "docs.python.org",
+  "nodejs.org",
+  "reactjs.org"
+]
+```
+
+### 2. 黑名单模式
+```javascript
+// 排除特定域名
+blocked_domains: [
+  "unreliable-wiki.com",
+  "spam-tutorial.net"
+]
+```
+
+### 3. 混合模式
+- 同时使用白名单和黑名单
+- 白名单优先级高于黑名单
+- 智能域名分类和过滤
+
+## 使用场景
+
+### 1. 技术文档搜索
+```javascript
+// 搜索API文档
+query: "React hooks useEffect documentation"
+allowed_domains: ["reactjs.org", "developer.mozilla.org"]
+```
+
+### 2. 问题解决
+```javascript
+// 搜索技术问题解决方案
+query: "Python async await best practices 2024"
+blocked_domains: ["outdated-tutorials.com"]
+```
+
+### 3. 最新技术趋势
+```javascript
+// 搜索最新技术发展
+query: "artificial intelligence developments 2024"
+allowed_domains: ["arxiv.org", "research.google.com", "openai.com"]
+```
+
+## 信息时效性
+
+### 1. 实时数据
+- 获取最新的技术文档更新
+- 跟踪当前的技术趋势和发展
+- 获取实时的API变更信息
+
+### 2. 知识补充
+- 补充AI训练数据的时效性限制
+- 获取最新的框架版本信息
+- 更新过时的技术知识
+
+### 3. 验证更新
+- 验证现有信息的准确性
+- 更新过时的最佳实践
+- 确认当前的技术标准
+
+## 结果处理
+
+### 1. 相关性过滤
+- 按搜索查询相关性排序
+- 过滤低质量结果
+- 优先显示权威源
+
+### 2. 内容提取
+- 提取关键信息片段
+- 保留原始链接引用
+- 标识信息来源
+
+### 3. 格式优化
+- 结构化显示搜索结果
+- 突出关键信息
+- 提供可操作的链接
+
+## 性能特征
+- **并发安全**: isConcurrencySafe() = true
+- **只读操作**: isReadOnly() = true
+- **地理限制**: 仅美国地区可用
+- **实时性**: 获取最新的网络信息
+
+## 错误处理
+
+### 1. 网络错误
+- 搜索服务不可用
+- 网络连接问题
+- 请求超时
+
+### 2. 查询错误
+- 查询过短或无效
+- 搜索语法错误
+- 域名过滤冲突
+
+### 3. 地区限制
+- 非美国地区的访问限制
+- 地理位置检测失败
+- 服务可用性问题
+
+## 安全和隐私
+
+### 1. 查询安全
+- 过滤恶意查询内容
+- 防止信息泄露
+- 保护用户隐私
+
+### 2. 结果验证
+- 验证搜索结果的可信度
+- 过滤恶意或欺诈网站
+- 标识可疑内容
+
+### 3. 数据保护
+- 不保存用户搜索历史
+- 匿名化搜索查询
+- 遵循隐私保护规范
+
+## 最佳实践
+
+### 1. 查询设计
+- 使用具体和明确的搜索术语
+- 包含相关的技术关键词
+- 避免过于宽泛的查询
+
+### 2. 域名策略
+- 使用权威技术网站的白名单
+- 排除已知的低质量域名
+- 平衡结果多样性和质量
+
+### 3. 结果利用
+- 结合多个搜索结果进行分析
+- 验证关键信息的准确性
+- 引用原始来源和链接
+
+## 架构地位
+WebSearch工具是Claude Code获取实时网络信息能力的核心，弥补了AI知识截止日期的限制，为用户提供最新、准确的技术信息和解决方案。它体现了Claude Code从静态知识向动态信息获取的重要扩展。
+
+## 技术特点
+1. **实时性**: 获取最新的网络信息和数据
+2. **过滤能力**: 灵活的域名白名单/黑名单机制
+3. **地理感知**: 地区限制确保服务质量
+4. **结构化**: 标准化的搜索结果格式
+5. **集成性**: 与对话流程的无缝集成
